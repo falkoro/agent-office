@@ -1,4 +1,4 @@
-# CI workflow for pixel-agents
+# CI workflow for Agent Office
 
 name: CI
 
@@ -10,7 +10,7 @@ on:
       - '.github/FUNDING.yml'
   push:
     branches:
-      - main
+      - master
     paths-ignore:
       - '**.md'
       - 'LICENSE'
@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   ci:

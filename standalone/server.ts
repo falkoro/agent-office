@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { URL } from 'url';
 
-type ProviderId = 'codex' | 'claude' | 'opencode' | 'antigravity';
+type ProviderId = 'codex' | 'claude' | 'opencode' | 'antigravity' | 'goose';
 
 interface ProcessInfo {
   pid: number;
@@ -53,6 +53,7 @@ const providerLabels: Record<ProviderId, string> = {
   claude: 'Claude',
   opencode: 'OpenCode',
   antigravity: 'Antigravity',
+  goose: 'Goose',
 };
 
 const agents = new Map<string, AgentRecord>();
@@ -269,13 +270,13 @@ function listLinuxAgentProcesses(): ProcessInfo[] {
     }
   }
 
-  return processes.sort((a, b) => a.pid - b.pid);
+  return filterTrackedAgentProcesses(processes).sort((a, b) => a.pid - b.pid);
 }
 
 function listWindowsAgentProcesses(): ProcessInfo[] {
   const script = [
     "$ErrorActionPreference = 'SilentlyContinue'",
-    "$items = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(codex|claude|opencode|agy|antigravity)(\\.exe)?$' -or $_.CommandLine -match 'opencode|codex|claude|antigravity|\\bagy\\b' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath",
+    "$items = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(codex|claude|opencode|agy|antigravity|goose)(\\.exe)?$' -or $_.CommandLine -match 'opencode|codex|claude|antigravity|\\bagy\\b|@block/goose|[\\\\/]goose(\\.cmd|\\.js)?(\\s|$)' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath",
     '$items | ConvertTo-Json -Compress',
   ].join('; ');
 
@@ -293,7 +294,7 @@ function listWindowsAgentProcesses(): ProcessInfo[] {
   }
 
   const rows = Array.isArray(parsed) ? parsed : [parsed];
-  return rows
+  const processes = rows
     .map((row) => {
       const item = row as Record<string, unknown>;
       const pid = Number(item.ProcessId || 0);
@@ -311,8 +312,9 @@ function listWindowsAgentProcesses(): ProcessInfo[] {
         startedSecondsAgo: 0,
       };
     })
-    .filter((proc) => proc.pid > 0 && identifyProvider(proc))
-    .sort((a, b) => a.pid - b.pid);
+    .filter((proc) => proc.pid > 0 && identifyProvider(proc));
+
+  return filterTrackedAgentProcesses(processes).sort((a, b) => a.pid - b.pid);
 }
 
 function identifyProvider(proc: ProcessInfo): ProviderId | null {
@@ -326,8 +328,71 @@ function identifyProvider(proc: ProcessInfo): ProviderId | null {
   if (executableNames.includes('opencode')) return 'opencode';
   if (executableNames.includes('agy') || executableNames.includes('antigravity'))
     return 'antigravity';
+  if (executableNames.includes('goose') || executableText.includes('@block/goose')) return 'goose';
 
   return null;
+}
+
+function filterTrackedAgentProcesses(processes: ProcessInfo[]): ProcessInfo[] {
+  const processProviders = new Map<number, ProviderId>();
+  for (const proc of processes) {
+    const provider = identifyProvider(proc);
+    if (provider) processProviders.set(proc.pid, provider);
+  }
+
+  const filtered = processes.filter((proc) => {
+    const provider = processProviders.get(proc.pid);
+    if (!provider) return false;
+    if (isHelperProcess(proc, provider)) return false;
+    if (isWrapperProcessWithProviderChild(proc, provider, processes, processProviders))
+      return false;
+    return true;
+  });
+
+  return filtered;
+}
+
+function isHelperProcess(proc: ProcessInfo, provider: ProviderId): boolean {
+  const text = proc.args.join(' ').toLowerCase();
+  const names = [proc.comm, ...proc.args.slice(0, 4).map((arg) => path.basename(arg))]
+    .map((name) => name.toLowerCase().replace(/\.(cmd|exe|js|mjs|cjs)$/i, ''))
+    .filter(Boolean);
+
+  if (text.split(/\s+/).includes('mcp-server')) return true;
+  if (provider === 'codex' && text.split(/\s+/).includes('app-server')) return true;
+  if (provider === 'goose' && names.some((name) => name.includes('goose-nanogpt-proxy'))) {
+    return true;
+  }
+
+  return false;
+}
+
+function isWrapperProcessWithProviderChild(
+  proc: ProcessInfo,
+  provider: ProviderId,
+  processes: ProcessInfo[],
+  processProviders: Map<number, ProviderId>,
+): boolean {
+  const comm = proc.comm.toLowerCase().replace(/\.(cmd|exe)$/i, '');
+  const wrapperNames = new Set([
+    'node',
+    'bun',
+    'python',
+    'python3',
+    'bash',
+    'sh',
+    'cmd',
+    'pwsh',
+    'powershell',
+  ]);
+  if (!wrapperNames.has(comm)) return false;
+
+  return processes.some(
+    (candidate) =>
+      candidate.ppid === proc.pid &&
+      processProviders.get(candidate.pid) === provider &&
+      !isHelperProcess(candidate, provider),
+  );
 }
 
 function buildAgentLabel(provider: ProviderId, proc: ProcessInfo): string {
@@ -341,6 +406,7 @@ function updateProviderActivities(): void {
     getClaudeActivity(),
     getOpenCodeActivity(),
     getAntigravityActivity(),
+    getGooseActivity(),
   ];
 
   for (const activity of nextActivities) {
@@ -388,6 +454,32 @@ function getAntigravityActivity(): ProviderActivity {
   const mtimeMs = file ? getMtimeMs(file) : 0;
   const text = file ? `Antigravity: ${readAntigravityHint(file)}` : 'Antigravity: working';
   return { provider: 'antigravity', text, file, mtimeMs, changed: false };
+}
+
+function getGooseActivity(): ProviderActivity {
+  const file = newestFileBySuffix(
+    [
+      path.join(os.homedir(), '.config', 'goose'),
+      path.join(os.homedir(), '.local', 'share', 'goose'),
+      path.join(os.homedir(), '.cache', 'goose'),
+      path.join(os.homedir(), '.goose'),
+      path.join(process.env.APPDATA || '', 'goose'),
+      path.join(process.env.LOCALAPPDATA || '', 'goose'),
+    ],
+    ['.jsonl', '.json', '.log'],
+  );
+  const mtimeMs = file ? getMtimeMs(file) : 0;
+  const text = file ? `Goose: ${readGooseHint(file)}` : 'Goose: working';
+  return { provider: 'goose', text, file, mtimeMs, changed: false };
+}
+
+function readGooseHint(file: string): string {
+  const raw = readTail(file, 64 * 1024);
+  if (/tool|function|call/i.test(raw)) return 'tool use';
+  if (/apply[_ -]?patch|edit|write|diff|patch/i.test(raw)) return 'editing';
+  if (/grep|search|find|read/i.test(raw)) return 'reading';
+  if (/shell|command|exec|terminal/i.test(raw)) return 'running command';
+  return 'working';
 }
 
 function splitWindowsCommandLine(commandLine: string): string[] {
@@ -608,6 +700,8 @@ function contentType(filePath: string): string {
       return 'text/css; charset=utf-8';
     case '.json':
       return 'application/json; charset=utf-8';
+    case '.svg':
+      return 'image/svg+xml';
     case '.png':
       return 'image/png';
     case '.jpg':
@@ -692,8 +786,13 @@ function readProcStat(
 }
 
 function newestFile(root: string, suffix: string): string | undefined {
+  return newestFileBySuffix([root], [suffix]);
+}
+
+function newestFileBySuffix(roots: string[], suffixes: string[]): string | undefined {
   let best: { file: string; mtimeMs: number } | undefined;
-  const stack = [root];
+  const normalizedSuffixes = suffixes.map((suffix) => suffix.toLowerCase());
+  const stack = [...roots];
   while (stack.length > 0) {
     const dir = stack.pop()!;
     let entries: fs.Dirent[];
@@ -708,7 +807,12 @@ function newestFile(root: string, suffix: string): string | undefined {
         stack.push(fullPath);
         continue;
       }
-      if (!entry.isFile() || !entry.name.endsWith(suffix)) continue;
+      if (
+        !entry.isFile() ||
+        !normalizedSuffixes.some((suffix) => entry.name.toLowerCase().endsWith(suffix))
+      ) {
+        continue;
+      }
       const mtimeMs = getMtimeMs(fullPath);
       if (!best || mtimeMs > best.mtimeMs) {
         best = { file: fullPath, mtimeMs };

@@ -95,15 +95,15 @@ export function AgentRoster({
   }
 
   return (
-    <aside className="absolute top-76 right-8 z-20 w-282 max-w-[calc(100vw_-_20px)] pixel-panel overflow-hidden">
-      <div className="flex items-center justify-between gap-6 px-8 py-6 border-b-2 border-border">
+    <aside className="absolute top-68 right-8 z-20 w-246 max-w-[calc(100vw_-_20px)] pixel-panel overflow-hidden">
+      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b-2 border-border">
         <div className="text-sm leading-none">Roster</div>
         <Button variant="ghost" size="icon" onClick={() => setCollapsed((value) => !value)}>
           {collapsed ? '+' : '-'}
         </Button>
       </div>
       {!collapsed && (
-        <div className="max-h-[38vh] overflow-y-auto p-5 flex flex-col gap-4">
+        <div className="max-h-[34vh] overflow-y-auto p-4 flex flex-col gap-3">
           {items.length === 0 ? (
             <div className="text-2xs text-text-muted px-4 py-6">No agents detected.</div>
           ) : (
@@ -111,15 +111,15 @@ export function AgentRoster({
               <button
                 key={item.id}
                 onClick={() => onSelectAgent(item.id)}
-                className={`bg-bg-dark border-2 text-left px-5 py-4 flex items-center gap-5 cursor-pointer hover:bg-btn-hover ${
+                className={`bg-bg-dark border-2 text-left px-4 py-3 flex items-center gap-4 cursor-pointer hover:bg-btn-hover ${
                   selectedAgentId === item.id ? 'border-accent' : 'border-border'
                 }`}
                 title={item.label}
               >
-                <span className="shrink-0 w-24 h-24 flex items-center justify-center bg-bg border-2 border-border text-2xs leading-none">
+                <span className="shrink-0 w-20 h-20 flex items-center justify-center bg-bg border-2 border-border text-2xs leading-none">
                   {item.number}
                 </span>
-                <span className={`shrink-0 w-6 h-6 rounded-full ${toneClass(item.tone)}`} />
+                <span className={`shrink-0 w-5 h-5 rounded-full ${toneClass(item.tone)}`} />
                 <span className="min-w-0 flex flex-col gap-1">
                   <span
                     className="text-2xs leading-none truncate"

@@ -89,9 +89,9 @@ export function BottomToolbar({
   };
 
   return (
-    <div className="absolute bottom-10 left-10 z-20 flex items-center gap-4 pixel-panel p-4">
+    <div className="absolute bottom-8 left-8 z-20 flex items-center gap-3 pixel-panel p-3">
       <div
-        className="flex items-center gap-4 pr-8 mr-2 border-r-2 border-border"
+        className="flex items-center gap-3 pr-6 mr-1 border-r-2 border-border"
         title={
           needsAttention
             ? `${agentCount.toString()} agents, approval needed`
@@ -101,20 +101,28 @@ export function BottomToolbar({
         <img
           src="/agent-office.svg"
           alt=""
-          className="w-28 h-28 shrink-0"
+          className="w-24 h-24 shrink-0"
           style={{ imageRendering: 'pixelated' }}
         />
         <span className="hidden sm:inline text-sm text-text whitespace-nowrap">Agent Office</span>
-        <span className="min-w-24 text-center text-sm text-text bg-bg-dark border-2 border-border px-4 py-1">
+        <span className="min-w-22 text-center text-sm text-text bg-bg-dark border-2 border-border px-3 py-1">
           {agentCount}
         </span>
         {needsAttention && (
           <span
-            className="text-warning text-sm leading-none"
+            className="text-warning leading-none"
             title="Approval needed"
             aria-label="Approval needed"
           >
-            🔔
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path
+                d="M5 8C5 5.2 7 3 10 3C13 3 15 5.2 15 8V12L17 15H3L5 12V8Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <path d="M8 17H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </span>
         )}
       </div>
@@ -127,6 +135,7 @@ export function BottomToolbar({
         >
           <Button
             variant="accent"
+            size="md"
             onClick={handleAgentClick}
             className={
               isFolderPickerOpen || isBypassMenuOpen
@@ -156,6 +165,7 @@ export function BottomToolbar({
       )}
       <Button
         variant={isEditMode ? 'active' : 'default'}
+        size="md"
         onClick={onToggleEditMode}
         title="Edit office layout"
       >
@@ -163,12 +173,13 @@ export function BottomToolbar({
       </Button>
       <Button
         variant={isSettingsOpen ? 'active' : 'default'}
+        size="md"
         onClick={onToggleSettings}
         title="Settings"
       >
         Settings
       </Button>
-      <Button variant="default" onClick={onOpenService} title="Service health and setup">
+      <Button variant="default" size="md" onClick={onOpenService} title="Service health and setup">
         Service
       </Button>
     </div>

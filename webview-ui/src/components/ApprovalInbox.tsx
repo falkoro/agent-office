@@ -47,12 +47,12 @@ export function ApprovalInbox({
   }
 
   return (
-    <div className="absolute top-8 right-8 z-30 flex flex-col items-end gap-6">
-      <div className="pixel-panel p-4 flex items-center gap-5">
+    <div className="absolute top-8 right-8 z-30 flex flex-col items-end gap-4">
+      <div className="pixel-panel p-3 flex items-center gap-4">
         {[...counts].map(([provider, count]) => (
           <button
             key={provider}
-            className="bg-bg-dark border-2 border-border text-text text-2xs px-6 py-3 cursor-default"
+            className="bg-bg-dark border-2 border-border text-text text-2xs px-4 py-2 cursor-default"
             title={`${count.toString()} ${provider} agent${count === 1 ? '' : 's'}`}
           >
             {provider} {count}
@@ -60,10 +60,11 @@ export function ApprovalInbox({
         ))}
         <Button
           variant={approvals.length > 0 ? 'accent' : 'default'}
+          size="sm"
           onClick={() => setOpen((value) => !value)}
           title="Approval inbox"
           aria-label={`${approvals.length.toString()} approvals`}
-          className="min-w-64 flex items-center justify-center gap-4"
+          className="h-28 min-w-44 flex items-center justify-center gap-3 px-4"
         >
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path
@@ -79,8 +80,8 @@ export function ApprovalInbox({
       </div>
 
       {open && (
-        <div className="pixel-panel w-300 max-w-[calc(100vw_-_20px)] p-8">
-          <div className="flex items-center justify-between gap-8 mb-8">
+        <div className="pixel-panel w-270 max-w-[calc(100vw_-_20px)] p-6">
+          <div className="flex items-center justify-between gap-6 mb-6">
             <div className="text-base leading-none">Approval Inbox</div>
             <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
               ×
@@ -93,14 +94,14 @@ export function ApprovalInbox({
               {approvals.map((item) => (
                 <button
                   key={`${item.id.toString()}:${item.toolId}`}
-                  className="text-left bg-bg-dark border-2 border-border hover:bg-btn-hover text-text px-8 py-6 cursor-pointer"
+                  className="text-left bg-bg-dark border-2 border-border hover:bg-btn-hover text-text px-6 py-4 cursor-pointer"
                   onClick={() => {
                     onSelectAgent(item.id);
                     setOpen(false);
                   }}
                 >
-                  <div className="flex items-center gap-5 min-w-0">
-                    <span className="shrink-0 w-24 h-24 flex items-center justify-center bg-bg border-2 border-border text-2xs leading-none">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span className="shrink-0 w-20 h-20 flex items-center justify-center bg-bg border-2 border-border text-2xs leading-none">
                       {numbers.get(item.id) ?? item.id}
                     </span>
                     <span className="text-sm truncate">{item.label}</span>

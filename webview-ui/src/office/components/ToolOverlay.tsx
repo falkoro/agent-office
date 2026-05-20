@@ -94,11 +94,11 @@ interface OverlayItem {
   top: number;
 }
 
-const OVERLAY_MARGIN_PX = 8;
-const OVERLAY_GAP_PX = 6;
-const COMPACT_OVERLAY_WIDTH_PX = 208;
-const DENSE_OVERLAY_WIDTH_PX = 136;
-const FULL_OVERLAY_WIDTH_PX = 320;
+const OVERLAY_MARGIN_PX = 6;
+const OVERLAY_GAP_PX = 4;
+const COMPACT_OVERLAY_WIDTH_PX = 156;
+const DENSE_OVERLAY_WIDTH_PX = 52;
+const FULL_OVERLAY_WIDTH_PX = 260;
 
 function overlaps(
   a: { left: number; top: number; width: number; height: number },
@@ -325,7 +325,7 @@ export function ToolOverlay({
           ? DENSE_OVERLAY_WIDTH_PX
           : COMPACT_OVERLAY_WIDTH_PX
         : FULL_OVERLAY_WIDTH_PX,
-      height: compact ? 32 : hasExtraLines ? 82 : 56,
+      height: compact ? 28 : hasExtraLines ? 66 : 48,
       left: 0,
       top: 0,
     });
@@ -340,7 +340,7 @@ export function ToolOverlay({
           return (
             <div
               key={item.id}
-              className="absolute pixel-panel px-6 py-3 flex items-center gap-4 overflow-hidden"
+              className="absolute pixel-panel px-4 py-2 flex items-center gap-3 overflow-hidden"
               style={{
                 left: item.left,
                 top: item.top,
@@ -353,7 +353,7 @@ export function ToolOverlay({
             >
               {item.dotColor && (
                 <span
-                  className={`w-5 h-5 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
+                  className={`w-4 h-4 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
                   style={{ background: item.dotColor }}
                 />
               )}
@@ -363,13 +363,15 @@ export function ToolOverlay({
               >
                 {item.agentNumber}
               </span>
-              <span
-                className="text-2xs leading-none truncate"
-                title={getCompactLabel(item)}
-                style={{ fontStyle: item.isSub ? 'italic' : undefined }}
-              >
-                {getCompactLabel(item)}
-              </span>
+              {!item.dense && (
+                <span
+                  className="text-2xs leading-none truncate"
+                  title={getCompactLabel(item)}
+                  style={{ fontStyle: item.isSub ? 'italic' : undefined }}
+                >
+                  {getCompactLabel(item)}
+                </span>
+              )}
             </div>
           );
         }
@@ -386,15 +388,15 @@ export function ToolOverlay({
               zIndex: item.isSelected ? 42 : 41,
             }}
           >
-            <div className="flex items-center border-border px-8 pt-2 pb-4 gap-5 pixel-panel whitespace-nowrap w-full">
+            <div className="flex items-center border-border px-5 py-3 gap-4 pixel-panel whitespace-nowrap w-full">
               {item.dotColor && (
                 <span
-                  className={`w-6 h-6 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
+                  className={`w-5 h-5 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
                   style={{ background: item.dotColor }}
                 />
               )}
               <span
-                className="shrink-0 w-22 h-22 flex items-center justify-center bg-bg-dark border-2 border-border text-2xs leading-none"
+                className="shrink-0 w-20 h-20 flex items-center justify-center bg-bg-dark border-2 border-border text-2xs leading-none"
                 title={`Agent ${item.agentNumber}`}
               >
                 {item.agentNumber}
@@ -403,7 +405,7 @@ export function ToolOverlay({
                 {item.aliasLabel && (
                   <span
                     className="overflow-hidden text-ellipsis block leading-none text-accent-bright"
-                    style={{ fontSize: '18px' }}
+                    style={{ fontSize: '16px' }}
                   >
                     {item.aliasLabel}
                   </span>
@@ -412,7 +414,7 @@ export function ToolOverlay({
                   <span
                     className="overflow-hidden text-ellipsis block leading-none"
                     style={{
-                      fontSize: '18px',
+                      fontSize: '16px',
                       color: item.ch.isTeamLead ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
                       fontWeight: item.ch.isTeamLead ? 'bold' : undefined,
                     }}
@@ -423,7 +425,7 @@ export function ToolOverlay({
                 <span
                   className="overflow-hidden text-ellipsis block leading-none"
                   style={{
-                    fontSize: item.isSub ? '20px' : '22px',
+                    fontSize: item.isSub ? '16px' : '18px',
                     fontStyle: item.isSub ? 'italic' : undefined,
                   }}
                   title={item.activityText}

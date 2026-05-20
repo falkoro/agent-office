@@ -25,8 +25,8 @@ running agent becomes a character you can see at a glance: working at a desk, wa
 or asking for approval with a visible bell signal in the browser tab.
 
 It is Bun-first, runs in a normal browser, and ships with service runners for WSL/systemd and
-Windows Task Scheduler. Today it observes Codex, Claude, OpenCode, and Antigravity processes, with
-room for more provider adapters.
+Windows Task Scheduler. Today it observes Codex, Claude, OpenCode, Antigravity, and Goose
+processes, with room for more provider adapters.
 
 PRs, provider adapters, layouts, bug reports, and feature requests are very welcome.
 
@@ -41,7 +41,7 @@ PRs, provider adapters, layouts, bug reports, and feature requests are very welc
 - Shows local CLI agents as animated characters in a pixel office.
 - Serves the office in a browser at `http://localhost:4627`.
 - Runs as a WSL systemd service or a Windows background scheduled task.
-- Detects Codex, Claude, OpenCode, and Antigravity/`agy` processes.
+- Detects Codex, Claude, OpenCode, Antigravity/`agy`, and Goose processes.
 - Shows live browser title counts like `(4) Agent Office`.
 - Shows a bell in the title and toolbar when approval is needed.
 - Collects pending confirmations in an approval inbox grouped beside provider counts.
@@ -121,6 +121,7 @@ bun run start:standalone:node
 | Claude      | `claude`                 | `~/.claude/projects/**/*.jsonl`             |
 | OpenCode    | `opencode`               | `~/.local/share/opencode/storage/**/*.json` |
 | Antigravity | `agy`, `antigravity`     | common Antigravity config/cache log folders |
+| Goose       | `goose`, `@block/goose`  | common Goose config/cache log folders       |
 
 The standalone server is intentionally observational. It watches process metadata and common local
 state/log files without requiring agent CLIs to be modified.
