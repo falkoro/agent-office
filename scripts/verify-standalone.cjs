@@ -39,12 +39,15 @@ async function main() {
       height,
       nonBlank,
       uniqueColors: colors.size,
+      title: document.title,
+      favicon: document.querySelector('link[rel="icon"]')?.getAttribute('href') || null,
+      hasLogo: !!document.querySelector('img[src="/agent-office.svg"]'),
       text: document.body.innerText.slice(0, 300),
     };
   });
 
   await page.screenshot({
-    path: 'artifacts/pixel-agents-wsl-dashboard.png',
+    path: 'artifacts/agent-office-dashboard.png',
     fullPage: true,
   });
   await browser.close();

@@ -13,6 +13,8 @@ interface BottomToolbarProps {
   onToggleSettings: () => void;
   workspaceFolders: WorkspaceFolder[];
   canLaunchAgents?: boolean;
+  agentCount?: number;
+  needsAttention?: boolean;
 }
 
 export function BottomToolbar({
@@ -23,6 +25,8 @@ export function BottomToolbar({
   onToggleSettings,
   workspaceFolders,
   canLaunchAgents = true,
+  agentCount = 0,
+  needsAttention = false,
 }: BottomToolbarProps) {
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [isBypassMenuOpen, setIsBypassMenuOpen] = useState(false);
@@ -84,6 +88,34 @@ export function BottomToolbar({
 
   return (
     <div className="absolute bottom-10 left-10 z-20 flex items-center gap-4 pixel-panel p-4">
+      <div
+        className="flex items-center gap-4 pr-8 mr-2 border-r-2 border-border"
+        title={
+          needsAttention
+            ? `${agentCount.toString()} agents, approval needed`
+            : `${agentCount.toString()} agents`
+        }
+      >
+        <img
+          src="/agent-office.svg"
+          alt=""
+          className="w-28 h-28 shrink-0"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <span className="hidden sm:inline text-sm text-text whitespace-nowrap">Agent Office</span>
+        <span className="min-w-24 text-center text-sm text-text bg-bg-dark border-2 border-border px-4 py-1">
+          {agentCount}
+        </span>
+        {needsAttention && (
+          <span
+            className="text-warning text-sm leading-none"
+            title="Approval needed"
+            aria-label="Approval needed"
+          >
+            🔔
+          </span>
+        )}
+      </div>
       {canLaunchAgents && (
         <div
           ref={folderPickerRef}

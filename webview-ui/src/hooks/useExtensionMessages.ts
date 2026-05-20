@@ -333,6 +333,7 @@ export function useExtensionMessages(
         os.setAgentActive(id, status === 'active');
         if (status === 'waiting') {
           os.showWaitingBubble(id);
+          os.sendToLounge(id);
           playDoneSound();
         }
       } else if (msg.type === 'agentToolPermission') {

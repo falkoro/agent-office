@@ -1,6 +1,6 @@
 # Deployment Options
 
-This fork currently ships:
+Agent Office currently ships:
 
 - WSL systemd service with Bun
 - Windows Task Scheduler background task with Bun or Node fallback

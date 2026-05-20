@@ -114,6 +114,22 @@ function App() {
     });
   }, []);
 
+  const needsApproval =
+    Object.values(agentTools).some((tools) =>
+      tools.some((tool) => tool.permissionWait && !tool.done),
+    ) ||
+    Object.values(subagentTools).some((toolsByParent) =>
+      Object.values(toolsByParent).some((tools) =>
+        tools.some((tool) => tool.permissionWait && !tool.done),
+      ),
+    );
+
+  useEffect(() => {
+    const countPrefix = agents.length > 0 ? `(${agents.length.toString()}) ` : '';
+    const attentionPrefix = needsApproval ? '🔔 ' : '';
+    document.title = `${attentionPrefix}${countPrefix}Agent Office`;
+  }, [agents.length, needsApproval]);
+
   const handleSelectAgent = useCallback((id: number) => {
     vscode.postMessage({ type: 'focusAgent', id });
   }, []);
@@ -332,6 +348,8 @@ function App() {
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
         workspaceFolders={workspaceFolders}
         canLaunchAgents={!isBrowserRuntime}
+        agentCount={agents.length}
+        needsAttention={needsApproval}
       />
 
       <VersionIndicator

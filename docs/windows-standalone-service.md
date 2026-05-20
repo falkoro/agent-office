@@ -1,6 +1,6 @@
-# Pixel Agents Windows Background Service
+# Agent Office Windows Background Service
 
-Windows can run the same standalone dashboard for native Windows Codex, Claude, and OpenCode
+Windows can run the same standalone dashboard for native Windows Codex, Claude, OpenCode, and Antigravity
 processes. The bundled installer uses Task Scheduler because plain Node/Bun processes are not
 Windows Service Control Manager services unless wrapped by WinSW, NSSM, or a similar service
 wrapper.
@@ -56,9 +56,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows-serv
 Useful commands:
 
 ```powershell
-Get-ScheduledTask PixelAgentsDashboard
-Start-ScheduledTask PixelAgentsDashboard
-Stop-ScheduledTask PixelAgentsDashboard
+Get-ScheduledTask AgentOfficeDashboard
+Start-ScheduledTask AgentOfficeDashboard
+Stop-ScheduledTask AgentOfficeDashboard
 bun run uninstall:windows-service
 ```
 

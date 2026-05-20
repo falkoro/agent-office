@@ -76,6 +76,8 @@ export function createCharacter(
     wanderLimit: randomInt(WANDER_MOVES_BEFORE_REST_MIN, WANDER_MOVES_BEFORE_REST_MAX),
     isActive: true,
     seatId,
+    workSeatId: null,
+    holdSeat: false,
     bubbleType: null,
     bubbleTimer: 0,
     seatTimer: 0,
@@ -107,6 +109,10 @@ export function updateCharacter(
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
+        if (ch.holdSeat) {
+          ch.frame = 0;
+          break;
+        }
         if (ch.seatTimer > 0) {
           ch.seatTimer -= dt;
           break;
@@ -245,7 +251,9 @@ export function updateCharacter(
               ch.dir = seat.facingDir;
               // seatTimer < 0 is a sentinel from setAgentActive(false) meaning
               // "turn just ended" — skip the long rest so idle transition is immediate
-              if (ch.seatTimer < 0) {
+              if (ch.holdSeat) {
+                ch.seatTimer = 0;
+              } else if (ch.seatTimer < 0) {
                 ch.seatTimer = 0;
               } else {
                 ch.seatTimer = randomRange(SEAT_REST_MIN_SEC, SEAT_REST_MAX_SEC);

@@ -93,6 +93,9 @@ export class OfficeState {
 
     // First pass: try to keep characters at their existing seats
     for (const ch of this.characters.values()) {
+      if (ch.workSeatId && !this.seats.has(ch.workSeatId)) {
+        ch.workSeatId = null;
+      }
       if (ch.seatId && this.seats.has(ch.seatId)) {
         const seat = this.seats.get(ch.seatId)!;
         if (!seat.assigned) {
@@ -232,6 +235,34 @@ export class OfficeState {
     return null;
   }
 
+  private getFurnitureForSeat(seatId: string): PlacedFurniture | undefined {
+    const furnitureUid = seatId.split(':')[0];
+    return this.layout.furniture.find((item) => item.uid === furnitureUid);
+  }
+
+  private isLoungeSeat(seatId: string): boolean {
+    const furniture = this.getFurnitureForSeat(seatId);
+    if (!furniture) return false;
+    return /sofa|bench|couch|lounge/i.test(furniture.type);
+  }
+
+  private findFreeLoungeSeat(): string | null {
+    const seats = [...this.seats].filter(([uid, seat]) => !seat.assigned && this.isLoungeSeat(uid));
+    if (seats.length === 0) return null;
+    return seats[Math.floor(Math.random() * seats.length)][0];
+  }
+
+  private findFreeWorkSeat(): string | null {
+    const preferred = this.findFreeSeat();
+    if (preferred && !this.isLoungeSeat(preferred)) return preferred;
+
+    const seats = [...this.seats].filter(
+      ([uid, seat]) => !seat.assigned && !this.isLoungeSeat(uid),
+    );
+    if (seats.length === 0) return preferred;
+    return seats[Math.floor(Math.random() * seats.length)][0];
+  }
+
   /**
    * Pick a diverse palette for a new agent based on currently active agents.
    * First 6 agents each get a unique skin (random order). Beyond 6, skins
@@ -352,14 +383,18 @@ export class OfficeState {
   reassignSeat(agentId: number, seatId: string): void {
     const ch = this.characters.get(agentId);
     if (!ch) return;
+    const seat = this.seats.get(seatId);
+    if (!seat || (seat.assigned && ch.seatId !== seatId)) return;
+    if (ch.seatId === seatId) {
+      this.sendToSeat(agentId);
+      return;
+    }
     // Unassign old seat
     if (ch.seatId) {
       const old = this.seats.get(ch.seatId);
       if (old) old.assigned = false;
     }
     // Assign new seat
-    const seat = this.seats.get(seatId);
-    if (!seat || seat.assigned) return;
     seat.assigned = true;
     ch.seatId = seatId;
     // Pathfind to new seat (unblock own seat tile for this query)
@@ -409,6 +444,48 @@ export class OfficeState {
         ch.seatTimer = INACTIVE_SEAT_TIMER_MIN_SEC + Math.random() * INACTIVE_SEAT_TIMER_RANGE_SEC;
       }
     }
+  }
+
+  /** Move a waiting agent to a sofa/bench seat and remember their work seat. */
+  sendToLounge(agentId: number): boolean {
+    const ch = this.characters.get(agentId);
+    if (!ch || ch.isSubagent) return false;
+
+    if (ch.seatId && this.isLoungeSeat(ch.seatId)) {
+      if (!ch.isActive) ch.holdSeat = true;
+      this.sendToSeat(agentId);
+      return true;
+    }
+
+    const loungeSeatId = this.findFreeLoungeSeat();
+    if (!loungeSeatId) return false;
+
+    if (ch.seatId && !this.isLoungeSeat(ch.seatId)) {
+      ch.workSeatId = ch.seatId;
+    }
+
+    this.reassignSeat(agentId, loungeSeatId);
+    if (!ch.isActive) ch.holdSeat = true;
+    return true;
+  }
+
+  /** Return a lounge-waiting agent to the desk/work seat it had before waiting. */
+  returnToWorkSeat(agentId: number): boolean {
+    const ch = this.characters.get(agentId);
+    if (!ch || ch.isSubagent || !ch.workSeatId) return false;
+
+    let targetSeatId: string | null = ch.workSeatId;
+    const target = this.seats.get(targetSeatId);
+    if (!target || target.assigned) {
+      targetSeatId = this.findFreeWorkSeat();
+    }
+    if (!targetSeatId) return false;
+
+    this.reassignSeat(agentId, targetSeatId);
+    ch.workSeatId = null;
+    ch.holdSeat = false;
+    ch.seatTimer = 0;
+    return true;
   }
 
   /** Walk an agent to an arbitrary walkable tile (right-click command) */
@@ -562,6 +639,10 @@ export class OfficeState {
     const ch = this.characters.get(id);
     if (ch) {
       ch.isActive = active;
+      if (active) {
+        ch.holdSeat = false;
+        this.returnToWorkSeat(id);
+      }
       if (!active) {
         // Sentinel -1: signals turn just ended, skip next seat rest timer.
         // Prevents the WALK handler from setting a 2-4 min rest on arrival.

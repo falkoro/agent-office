@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "pixel-agents",
+      "name": "agent-office",
       "devDependencies": {
         "@playwright/test": "^1.58.2",
         "@types/node": "25.x",

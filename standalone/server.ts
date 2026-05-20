@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { URL } from 'url';
 
-type ProviderId = 'codex' | 'claude' | 'opencode';
+type ProviderId = 'codex' | 'claude' | 'opencode' | 'antigravity';
 
 interface ProcessInfo {
   pid: number;
@@ -52,6 +52,7 @@ const providerLabels: Record<ProviderId, string> = {
   codex: 'Codex',
   claude: 'Claude',
   opencode: 'OpenCode',
+  antigravity: 'Antigravity',
 };
 
 const agents = new Map<string, AgentRecord>();
@@ -64,7 +65,7 @@ const startedAt = Date.now();
 
 const server = http.createServer((req, res) => {
   void handleRequest(req, res).catch((error) => {
-    console.error('[Pixel Agents Standalone] request failed:', error);
+    console.error('[Agent Office] request failed:', error);
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
     }
@@ -73,8 +74,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[Pixel Agents Standalone] listening on http://${HOST}:${PORT}`);
-  console.log(`[Pixel Agents Standalone] serving ${webRoot}`);
+  console.log(`[Agent Office] listening on http://${HOST}:${PORT}`);
+  console.log(`[Agent Office] serving ${webRoot}`);
   scanAndBroadcast();
   setInterval(scanAndBroadcast, POLL_INTERVAL_MS);
 });
@@ -274,7 +275,7 @@ function listLinuxAgentProcesses(): ProcessInfo[] {
 function listWindowsAgentProcesses(): ProcessInfo[] {
   const script = [
     "$ErrorActionPreference = 'SilentlyContinue'",
-    "$items = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(codex|claude|opencode)(\\.exe)?$' -or $_.CommandLine -match 'opencode|codex|claude' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath",
+    "$items = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(codex|claude|opencode|agy|antigravity)(\\.exe)?$' -or $_.CommandLine -match 'opencode|codex|claude|antigravity|\\bagy\\b' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath",
     '$items | ConvertTo-Json -Compress',
   ].join('; ');
 
@@ -315,12 +316,16 @@ function listWindowsAgentProcesses(): ProcessInfo[] {
 }
 
 function identifyProvider(proc: ProcessInfo): ProviderId | null {
-  const arg0 = path.basename(proc.args[0] || '').toLowerCase();
-  const command = [proc.comm, arg0, proc.args.join(' ')].join(' ').toLowerCase();
+  const executableNames = [proc.comm, ...proc.args.slice(0, 4).map((arg) => path.basename(arg))]
+    .map((name) => name.toLowerCase().replace(/\.(cmd|exe|js|mjs|cjs)$/i, ''))
+    .filter(Boolean);
+  const executableText = proc.args.slice(0, 4).join(' ').toLowerCase();
 
-  if (proc.comm === 'codex' || arg0 === 'codex') return 'codex';
-  if (proc.comm === 'claude' || arg0 === 'claude') return 'claude';
-  if (command.includes('opencode')) return 'opencode';
+  if (executableNames.includes('codex') || executableText.includes('@openai/codex')) return 'codex';
+  if (executableNames.includes('claude')) return 'claude';
+  if (executableNames.includes('opencode')) return 'opencode';
+  if (executableNames.includes('agy') || executableNames.includes('antigravity'))
+    return 'antigravity';
 
   return null;
 }
@@ -335,6 +340,7 @@ function updateProviderActivities(): void {
     getCodexActivity(),
     getClaudeActivity(),
     getOpenCodeActivity(),
+    getAntigravityActivity(),
   ];
 
   for (const activity of nextActivities) {
@@ -369,6 +375,19 @@ function getOpenCodeActivity(): ProviderActivity {
   const mtimeMs = file ? getMtimeMs(file) : 0;
   const text = file ? `OpenCode: ${readOpenCodeHint(file)}` : 'OpenCode: working';
   return { provider: 'opencode', text, file, mtimeMs, changed: false };
+}
+
+function getAntigravityActivity(): ProviderActivity {
+  const file =
+    newestFile(path.join(os.homedir(), '.antigravity'), '.log') ??
+    newestFile(path.join(os.homedir(), '.config', 'antigravity'), '.log') ??
+    newestFile(path.join(os.homedir(), '.local', 'share', 'antigravity'), '.log') ??
+    newestFile(path.join(os.homedir(), '.cache', 'antigravity'), '.log') ??
+    newestFile(path.join(process.env.LOCALAPPDATA || '', 'Antigravity'), '.log') ??
+    newestFile(path.join(process.env.APPDATA || '', 'Antigravity'), '.log');
+  const mtimeMs = file ? getMtimeMs(file) : 0;
+  const text = file ? `Antigravity: ${readAntigravityHint(file)}` : 'Antigravity: working';
+  return { provider: 'antigravity', text, file, mtimeMs, changed: false };
 }
 
 function splitWindowsCommandLine(commandLine: string): string[] {
@@ -420,6 +439,14 @@ function readOpenCodeHint(file: string): string {
   const raw = readTail(file, 64 * 1024);
   if (/"tool"/i.test(raw) || /"part":\s*"tool"/i.test(raw)) return 'tool use';
   if (/"diff"/i.test(raw) || /"patch"/i.test(raw)) return 'editing';
+  return 'working';
+}
+
+function readAntigravityHint(file: string): string {
+  const raw = readTail(file, 64 * 1024);
+  if (/apply[_ -]?patch|edit|write|diff|patch/i.test(raw)) return 'editing';
+  if (/grep|search|find|read/i.test(raw)) return 'reading';
+  if (/shell|command|exec|terminal/i.test(raw)) return 'running command';
   return 'working';
 }
 
@@ -620,14 +647,14 @@ function handleClientMessage(body: string): void {
     const message = JSON.parse(body) as WebviewMessage;
     if (message.type === 'webviewReady') return;
     if (message.type === 'saveLayout' && message.layout) {
-      const dir = path.join(os.homedir(), '.pixel-agents-wsl');
+      const dir = path.join(os.homedir(), '.agent-office');
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
       fs.writeFileSync(path.join(dir, 'layout.json'), JSON.stringify(message.layout, null, 2));
       return;
     }
-    console.log('[Pixel Agents Standalone] client message:', JSON.stringify(message));
+    console.log('[Agent Office] client message:', JSON.stringify(message));
   } catch {
-    console.warn('[Pixel Agents Standalone] ignored invalid client message');
+    console.warn('[Agent Office] ignored invalid client message');
   }
 }
 

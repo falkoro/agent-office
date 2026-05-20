@@ -24,11 +24,13 @@
 
 <br/>
 
+Agent Office is a Bun-first standalone fork of Pixel Agents for watching local CLI agents from a browser. It keeps the original pixel office, adds WSL/systemd and Windows Task Scheduler runners, and observes Codex, Claude, OpenCode, and Antigravity CLI processes.
+
 Pixel Agents turns multi-agent AI systems into something you can actually see and manage. Each agent becomes a character in a pixel art office. They walk around, sit at their desk, and visually reflect what they are doing — typing when writing code, reading when searching files, waiting when it needs your attention.
 
 Right now it works as a VS Code extension with Claude Code. The vision though, is a fully agent-agnostic, platform-agnostic interface for orchestrating any AI agents, deployable anywhere.
 
-This fork also includes Bun-first standalone services that serve the same pixel office in a browser and observe running Codex, Claude, and OpenCode CLIs. See [docs/wsl-standalone-service.md](docs/wsl-standalone-service.md) for WSL/systemd and [docs/windows-standalone-service.md](docs/windows-standalone-service.md) for Windows Task Scheduler.
+The standalone services serve the same pixel office in a browser and observe running Codex, Claude, OpenCode, and Antigravity CLIs. See [docs/wsl-standalone-service.md](docs/wsl-standalone-service.md) for WSL/systemd and [docs/windows-standalone-service.md](docs/windows-standalone-service.md) for Windows Task Scheduler.
 
 Fork attribution is documented in [ATTRIBUTION.md](ATTRIBUTION.md). The original project is [pablodelucca/pixel-agents](https://github.com/pablodelucca/pixel-agents).
 

@@ -1,5 +1,5 @@
 param(
-  [string]$TaskName = "PixelAgentsDashboard"
+  [string]$TaskName = "AgentOfficeDashboard"
 )
 
 $ErrorActionPreference = "Stop"

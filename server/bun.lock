@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "pixel-agents",
+      "name": "agent-office-server",
       "devDependencies": {
         "vitest": "^3.2.1",
       },

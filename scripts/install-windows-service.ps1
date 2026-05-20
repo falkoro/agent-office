@@ -1,5 +1,5 @@
 param(
-  [string]$TaskName = "PixelAgentsDashboard",
+  [string]$TaskName = "AgentOfficeDashboard",
   [int]$Port = 4627,
   [ValidateSet("auto", "bun", "node")]
   [string]$Runtime = "auto"
@@ -12,6 +12,15 @@ $runner = Join-Path $root "scripts\run-windows-dashboard.ps1"
 
 if (-not (Test-Path (Join-Path $root "dist\webview\index.html"))) {
   throw "Web build output is missing. Run: bun install; cd webview-ui; bun install; cd ..; bun run build:webview"
+}
+
+$legacyTaskName = "PixelAgentsDashboard"
+if ($TaskName -ne $legacyTaskName) {
+  $legacyTask = Get-ScheduledTask -TaskName $legacyTaskName -ErrorAction SilentlyContinue
+  if ($legacyTask) {
+    Stop-ScheduledTask -TaskName $legacyTaskName -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $legacyTaskName -Confirm:$false
+  }
 }
 
 $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
@@ -40,11 +49,11 @@ Register-ScheduledTask `
   -Action $action `
   -Trigger $trigger `
   -Principal $principal `
-  -Description "Pixel Agents dashboard for native Windows Codex, Claude, and OpenCode processes." `
+  -Description "Agent Office dashboard for native Windows Codex, Claude, OpenCode, and Antigravity processes." `
   -Force | Out-Null
 
 Start-ScheduledTask -TaskName $TaskName
 
-Write-Host "Pixel Agents Windows background task is installed and running."
+Write-Host "Agent Office Windows background task is installed and running."
 Write-Host "Open http://localhost:$Port"
 Write-Host "Task name: $TaskName"

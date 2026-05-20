@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVICE_NAME="${SERVICE_NAME:-pixel-agents-wsl}"
+SERVICE_NAME="${SERVICE_NAME:-agent-office-wsl}"
+LEGACY_SERVICE_NAME="${LEGACY_SERVICE_NAME:-pixel-agents-wsl}"
 PORT="${PIXEL_AGENTS_PORT:-4627}"
 HOST="${PIXEL_AGENTS_HOST:-0.0.0.0}"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
@@ -25,6 +26,11 @@ if [[ ! -f "$ROOT/dist/webview/index.html" ]]; then
   exit 1
 fi
 
+if [[ "$SERVICE_NAME" != "$LEGACY_SERVICE_NAME" ]]; then
+  sudo systemctl disable --now "$LEGACY_SERVICE_NAME" 2>/dev/null || true
+  sudo rm -f "/etc/systemd/system/${LEGACY_SERVICE_NAME}.service"
+fi
+
 if BUN_PATH="$(find_bun)"; then
   EXEC_START="${BUN_PATH} ${ROOT}/standalone/server.ts"
   RUNTIME_LABEL="Bun (${BUN_PATH})"
@@ -43,7 +49,7 @@ fi
 
 sudo tee "$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=Pixel Agents WSL Dashboard
+Description=Agent Office WSL Dashboard
 After=network.target
 
 [Service]
@@ -68,5 +74,5 @@ sudo systemctl restart "$SERVICE_NAME"
 sudo systemctl --no-pager --full status "$SERVICE_NAME"
 
 echo
-echo "Pixel Agents WSL is available at http://localhost:${PORT}"
+echo "Agent Office WSL is available at http://localhost:${PORT}"
 echo "Runtime: ${RUNTIME_LABEL}"

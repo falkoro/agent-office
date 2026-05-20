@@ -162,6 +162,10 @@ export interface Character {
   isActive: boolean;
   /** Assigned seat uid, or null if no seat */
   seatId: string | null;
+  /** Desk/work seat remembered while the agent waits in a lounge seat */
+  workSeatId: string | null;
+  /** Stay seated while inactive, used for waiting agents in lounge seats */
+  holdSeat: boolean;
   /** Active speech bubble type, or null if none showing */
   bubbleType: 'permission' | 'waiting' | null;
   /** Countdown timer for bubble (waiting: 2→0, permission: unused) */
