@@ -1,6 +1,7 @@
-# Attribution
+# Attribution and Thanks
 
-This repository is a fork of [pablodelucca/pixel-agents](https://github.com/pablodelucca/pixel-agents).
+Agent Office began as a fork of
+[pablodelucca/pixel-agents](https://github.com/pablodelucca/pixel-agents).
 
 Original project:
 
@@ -8,8 +9,11 @@ Original project:
 - License: MIT
 - Upstream repository: <https://github.com/pablodelucca/pixel-agents>
 
-This fork, named Agent Office, adds Bun-first standalone dashboard services for WSL and Windows,
-plus Codex, Claude, OpenCode, and Antigravity process observation outside the VS Code extension
-host.
+Huge thank you to Pablo and the upstream contributors. Pixel Agents created the office metaphor,
+canvas renderer, layout editor, character animations, furniture system, and Claude Code extension
+experience that Agent Office builds on.
 
-Please keep the upstream license and credit intact when redistributing this fork.
+Agent Office adds Bun-first standalone dashboard services for WSL and Windows, plus Codex, Claude,
+OpenCode, and Antigravity process observation outside the VS Code extension host.
+
+Please keep the upstream license and credit intact when redistributing this project.
