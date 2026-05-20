@@ -451,10 +451,13 @@ function readAntigravityHint(file: string): string {
 }
 
 function prettifyTool(name: string): string {
-  return name
+  const normalized = name
     .replace(/^functions\./, '')
+    .replace(/^mcp__(?:[a-zA-Z0-9-]+_?)+__/, '')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+    .replace(/\b([A-Za-z][A-Za-z0-9-]*)(\s+\1\b)+/gi, '$1')
+    .trim();
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function sendAgentActivityToAll(

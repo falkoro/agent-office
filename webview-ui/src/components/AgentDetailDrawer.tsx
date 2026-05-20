@@ -1,8 +1,10 @@
 import {
   type AgentAliases,
+  cleanActivityText,
   getAgentActivity,
   getAgentAliasKey,
   getAgentDisplayName,
+  getProviderName,
   getSubagentDisplayName,
 } from '../agentDisplay.js';
 import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
@@ -56,6 +58,9 @@ export function AgentDetailDrawer({
   const activity = getAgentActivity(tools, ch, agentStatuses[agentId]);
   const status = agentStatuses[agentId] ?? (ch.isActive ? 'active' : 'idle');
   const totalTokens = ch.inputTokens + ch.outputTokens;
+  const activityProvider = meta
+    ? getProviderName(officeState.characters.get(meta.parentAgentId))
+    : getProviderName(ch);
   const title = isSubagent
     ? getSubagentDisplayName(officeState, agentId, aliases, subagentCharacters)
     : alias || ch.folderName || 'Agent';
@@ -152,9 +157,9 @@ export function AgentDetailDrawer({
                 <div
                   key={tool.toolId}
                   className="bg-bg-dark border-2 border-border px-6 py-4 text-2xs"
-                  title={tool.status}
+                  title={cleanActivityText(tool.status, activityProvider)}
                 >
-                  <div className="truncate">{tool.status}</div>
+                  <div className="truncate">{cleanActivityText(tool.status, activityProvider)}</div>
                   <div className="text-text-muted">
                     {tool.permissionWait ? 'needs approval' : tool.done ? 'done' : 'running'}
                   </div>

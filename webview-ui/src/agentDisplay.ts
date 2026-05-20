@@ -39,6 +39,26 @@ export function getAgentDisplayName(
   return getBaseAgentName(ch, id);
 }
 
+export function getProviderName(ch: Character | undefined): string {
+  if (!ch?.folderName) return 'Agent';
+  const match = ch.folderName.match(/^([A-Za-z]+)\s+\d+\s+·/);
+  return match?.[1] ?? 'Agent';
+}
+
+export function cleanActivityText(status: string, provider?: string): string {
+  let text = status.trim();
+  const providerPrefix = provider ? new RegExp(`^${provider}\\s*:\\s*`, 'i') : null;
+  if (providerPrefix?.test(text)) {
+    text = text.replace(providerPrefix, '');
+  } else {
+    text = text.replace(/^(Codex|Claude|OpenCode|Antigravity|Agent)\s*:\s*/i, '');
+  }
+  text = text.replace(/^Mcp\s+/i, '');
+  text = text.replace(/\b([A-Za-z][A-Za-z0-9-]*)(\s+\1\b)+/gi, '$1');
+  if (provider && text.toLowerCase() === provider.toLowerCase()) return 'working';
+  return text.trim() || status;
+}
+
 export function getSubagentDisplayName(
   officeState: OfficeState,
   id: number,
@@ -64,9 +84,12 @@ export function getAgentActivity(
 ): string {
   const active = tools ? [...tools].reverse().find((tool) => !tool.done) : undefined;
   if (active?.permissionWait) return 'Needs approval';
-  if (active) return active.status;
-  if (tools && tools.length > 0 && ch?.isActive) return tools[tools.length - 1].status;
-  if (fallbackStatus) return fallbackStatus;
+  const provider = getProviderName(ch);
+  if (active) return cleanActivityText(active.status, provider);
+  if (tools && tools.length > 0 && ch?.isActive) {
+    return cleanActivityText(tools[tools.length - 1].status, provider);
+  }
+  if (fallbackStatus) return cleanActivityText(fallbackStatus, provider);
   return ch?.isActive ? 'Working' : 'Idle';
 }
 
@@ -89,7 +112,7 @@ export function getApprovalItems(
       items.push({
         id,
         label: getAgentDisplayName(officeState, id, aliases),
-        status: tool.status,
+        status: cleanActivityText(tool.status, getProviderName(officeState.characters.get(id))),
         toolId: tool.toolId,
       });
     }
@@ -108,7 +131,10 @@ export function getApprovalItems(
         items.push({
           id: subId,
           label: getSubagentDisplayName(officeState, subId, aliases, subagentCharacters),
-          status: tool.status,
+          status: cleanActivityText(
+            tool.status,
+            getProviderName(officeState.characters.get(parentAgentId)),
+          ),
           toolId: `${parentToolId}:${tool.toolId}`,
           parentAgentId,
           isSubagent: subId !== parentAgentId,
@@ -117,10 +143,4 @@ export function getApprovalItems(
     }
   }
   return items;
-}
-
-export function getProviderName(ch: Character | undefined): string {
-  if (!ch?.folderName) return 'Agent';
-  const match = ch.folderName.match(/^([A-Za-z]+)\s+\d+\s+·/);
-  return match?.[1] ?? 'Agent';
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { cleanActivityText } from '../../agentDisplay.js';
 import { Button } from '../../components/ui/Button.js';
 import {
   CHARACTER_SITTING_OFFSET_PX,
@@ -40,7 +41,7 @@ interface ToolOverlayProps {
 function getActivityText(
   agentId: number,
   agentTools: Record<number, ToolActivity[]>,
-  isActive: boolean,
+  ch: Character,
 ): string {
   const tools = agentTools[agentId];
   if (tools && tools.length > 0) {
@@ -48,12 +49,12 @@ function getActivityText(
     const activeTool = [...tools].reverse().find((t) => !t.done);
     if (activeTool) {
       if (activeTool.permissionWait) return 'Needs approval';
-      return activeTool.status;
+      return cleanActivityText(activeTool.status, getProviderLabel(ch.folderName));
     }
     // All tools done but agent still active (mid-turn) — keep showing last tool status
-    if (isActive) {
+    if (ch.isActive) {
       const lastTool = tools[tools.length - 1];
-      if (lastTool) return lastTool.status;
+      if (lastTool) return cleanActivityText(lastTool.status, getProviderLabel(ch.folderName));
     }
   }
 
@@ -69,11 +70,13 @@ function getFuelColor(ratio: number): string {
 
 interface OverlayItem {
   id: number;
+  agentNumber: string;
   ch: Character;
   isSelected: boolean;
   isHovered: boolean;
   isSub: boolean;
   compact: boolean;
+  dense: boolean;
   activityText: string;
   dotColor: string | null;
   aliasLabel?: string;
@@ -92,7 +95,8 @@ interface OverlayItem {
 
 const OVERLAY_MARGIN_PX = 8;
 const OVERLAY_GAP_PX = 6;
-const COMPACT_OVERLAY_WIDTH_PX = 188;
+const COMPACT_OVERLAY_WIDTH_PX = 208;
+const DENSE_OVERLAY_WIDTH_PX = 136;
 const FULL_OVERLAY_WIDTH_PX = 320;
 
 function overlaps(
@@ -172,6 +176,7 @@ function getProviderLabel(folderName: string | undefined): string | undefined {
 }
 
 function getCompactLabel(item: OverlayItem): string {
+  if (item.dense) return item.activityText;
   const name =
     item.aliasLabel ||
     item.teamRoleLabel ||
@@ -224,6 +229,17 @@ export function ToolOverlay({
   // All character IDs
   const allIds = [...agents, ...subagentCharacters.map((s) => s.id)];
   const overlayItems: OverlayItem[] = [];
+  const agentNumbers = new Map<number, string>();
+  agents.forEach((id, index) => agentNumbers.set(id, (index + 1).toString()));
+  const subagentCountsByParent = new Map<number, number>();
+  for (const sub of subagentCharacters) {
+    const parentNumber = agentNumbers.get(sub.parentAgentId) ?? sub.parentAgentId.toString();
+    const nextCount = (subagentCountsByParent.get(sub.parentAgentId) ?? 0) + 1;
+    subagentCountsByParent.set(sub.parentAgentId, nextCount);
+    agentNumbers.set(sub.id, `${parentNumber}.${nextCount.toString()}`);
+  }
+  const denseCompact =
+    rect.width < 980 || allIds.length > Math.max(6, Math.floor(rect.width / 170));
 
   for (const id of allIds) {
     const ch = officeState.characters.get(id);
@@ -252,13 +268,17 @@ export function ToolOverlay({
       if (subHasPermission || activeSubTool?.permissionWait) {
         activityText = 'Needs approval';
       } else if (activeSubTool) {
-        activityText = activeSubTool.status;
+        const parentCh = meta ? officeState.characters.get(meta.parentAgentId) : undefined;
+        activityText = cleanActivityText(
+          activeSubTool.status,
+          getProviderLabel(parentCh?.folderName),
+        );
       } else {
         const sub = subagentCharacters.find((s) => s.id === id);
         activityText = sub ? sub.label : 'Subtask';
       }
     } else {
-      activityText = getActivityText(id, agentTools, ch.isActive);
+      activityText = getActivityText(id, agentTools, ch);
     }
 
     // Determine dot color
@@ -290,11 +310,13 @@ export function ToolOverlay({
 
     overlayItems.push({
       id,
+      agentNumber: agentNumbers.get(id) ?? id.toString(),
       ch,
       isSelected,
       isHovered,
       isSub,
       compact,
+      dense: compact && denseCompact,
       activityText,
       dotColor,
       aliasLabel,
@@ -305,8 +327,12 @@ export function ToolOverlay({
       tokenRatio,
       screenX,
       screenY,
-      width: compact ? COMPACT_OVERLAY_WIDTH_PX : FULL_OVERLAY_WIDTH_PX,
-      height: compact ? 30 : hasExtraLines ? 82 : 56,
+      width: compact
+        ? denseCompact
+          ? DENSE_OVERLAY_WIDTH_PX
+          : COMPACT_OVERLAY_WIDTH_PX
+        : FULL_OVERLAY_WIDTH_PX,
+      height: compact ? 32 : hasExtraLines ? 82 : 56,
       left: 0,
       top: 0,
     });
@@ -334,10 +360,16 @@ export function ToolOverlay({
             >
               {item.dotColor && (
                 <span
-                  className={`w-5 h-5 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.includes('approval') ? 'pixel-pulse' : ''}`}
+                  className={`w-5 h-5 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
                   style={{ background: item.dotColor }}
                 />
               )}
+              <span
+                className="shrink-0 w-18 h-18 flex items-center justify-center bg-bg-dark border-2 border-border text-2xs leading-none"
+                title={`Agent ${item.agentNumber}`}
+              >
+                {item.agentNumber}
+              </span>
               <span
                 className="text-2xs leading-none truncate"
                 title={getCompactLabel(item)}
@@ -364,10 +396,16 @@ export function ToolOverlay({
             <div className="flex items-center border-border px-8 pt-2 pb-4 gap-5 pixel-panel whitespace-nowrap w-full">
               {item.dotColor && (
                 <span
-                  className={`w-6 h-6 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.includes('approval') ? 'pixel-pulse' : ''}`}
+                  className={`w-6 h-6 rounded-full shrink-0 ${item.ch.isActive && !item.activityText.toLowerCase().includes('approval') ? 'pixel-pulse' : ''}`}
                   style={{ background: item.dotColor }}
                 />
               )}
+              <span
+                className="shrink-0 w-22 h-22 flex items-center justify-center bg-bg-dark border-2 border-border text-2xs leading-none"
+                title={`Agent ${item.agentNumber}`}
+              >
+                {item.agentNumber}
+              </span>
               <div className="flex flex-col gap-0 overflow-hidden min-w-0">
                 {item.aliasLabel && (
                   <span
