@@ -155,9 +155,10 @@ export function ToolOverlay({
         // Team info
         const isTeamAgent = !!ch.teamName;
         const teamRoleLabel = ch.isTeamLead ? 'LEAD' : ch.agentName || null;
+        const aliasLabel = !isSub ? ch.aliasName : undefined;
         const totalTokens = ch.inputTokens + ch.outputTokens;
         const tokenRatio = totalTokens / MAX_CONTEXT_TOKENS;
-        const hasExtraLines = !!(ch.folderName || teamRoleLabel);
+        const hasExtraLines = !!(aliasLabel || ch.folderName || teamRoleLabel);
 
         return (
           <div
@@ -179,6 +180,14 @@ export function ToolOverlay({
                 />
               )}
               <div className="flex flex-col gap-0 overflow-hidden">
+                {aliasLabel && (
+                  <span
+                    className="overflow-hidden text-ellipsis block leading-none text-accent-bright"
+                    style={{ fontSize: '18px' }}
+                  >
+                    {aliasLabel}
+                  </span>
+                )}
                 {teamRoleLabel && (
                   <span
                     className="overflow-hidden text-ellipsis block leading-none"

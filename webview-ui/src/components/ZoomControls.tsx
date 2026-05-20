@@ -12,9 +12,10 @@ import { Button } from './ui/Button.js';
 interface ZoomControlsProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onFitToPage: () => void;
 }
 
-export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
+export function ZoomControls({ zoom, onZoomChange, onFitToPage }: ZoomControlsProps) {
   const [showLevel, setShowLevel] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,6 +116,19 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
               strokeWidth="2"
               strokeLinecap="round"
             />
+          </svg>
+        </Button>
+        <Button
+          size="icon_lg"
+          onClick={onFitToPage}
+          className="border-border! shadow-pixel"
+          title="Fit office to page"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M3 8V3H8" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 3H17V8" stroke="currentColor" strokeWidth="2" />
+            <path d="M17 12V17H12" stroke="currentColor" strokeWidth="2" />
+            <path d="M8 17H3V12" stroke="currentColor" strokeWidth="2" />
           </svg>
         </Button>
       </div>

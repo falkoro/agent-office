@@ -39,6 +39,7 @@ interface OfficeCanvasProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   panRef: React.MutableRefObject<{ x: number; y: number }>;
+  onAgentSelectionChange?: (agentId: number | null) => void;
 }
 
 export function OfficeCanvas({
@@ -56,6 +57,7 @@ export function OfficeCanvas({
   zoom,
   onZoomChange,
   panRef,
+  onAgentSelectionChange,
 }: OfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -680,11 +682,13 @@ export function OfficeCanvas({
         if (officeState.selectedAgentId === hitId) {
           officeState.selectedAgentId = null;
           officeState.cameraFollowId = null;
+          onAgentSelectionChange?.(null);
         } else {
           officeState.selectedAgentId = hitId;
           officeState.cameraFollowId = hitId;
+          onAgentSelectionChange?.(hitId);
+          onClick(hitId); // still focus terminal
         }
-        onClick(hitId); // still focus terminal
         return;
       }
 
@@ -704,12 +708,14 @@ export function OfficeCanvas({
                   officeState.sendToSeat(officeState.selectedAgentId);
                   officeState.selectedAgentId = null;
                   officeState.cameraFollowId = null;
+                  onAgentSelectionChange?.(null);
                   return;
                 } else if (!seat.assigned) {
                   // Clicked available seat — reassign
                   officeState.reassignSeat(officeState.selectedAgentId, seatId);
                   officeState.selectedAgentId = null;
                   officeState.cameraFollowId = null;
+                  onAgentSelectionChange?.(null);
                   // Persist seat assignments (exclude sub-agents)
                   const seats: Record<number, { palette: number; seatId: string | null }> = {};
                   for (const ch of officeState.characters.values()) {
@@ -726,9 +732,10 @@ export function OfficeCanvas({
         // Clicked empty space — deselect
         officeState.selectedAgentId = null;
         officeState.cameraFollowId = null;
+        onAgentSelectionChange?.(null);
       }
     },
-    [officeState, onClick, screenToWorld, screenToTile, isEditMode],
+    [officeState, onClick, onAgentSelectionChange, screenToWorld, screenToTile, isEditMode],
   );
 
   const handleMouseLeave = useCallback(() => {

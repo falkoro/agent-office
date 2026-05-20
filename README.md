@@ -40,6 +40,9 @@ PRs, provider adapters, layouts, bug reports, and feature requests are very welc
 - Detects Codex, Claude, OpenCode, and Antigravity/`agy` processes.
 - Shows live browser title counts like `(4) Agent Office`.
 - Shows a bell in the title and toolbar when approval is needed.
+- Collects pending confirmations in an approval inbox grouped beside provider counts.
+- Lets you click an agent to inspect activity, tokens, workspace, and set a friendly name.
+- Includes a fit-to-page control that recenters the office around the visible workspace.
 - Sends waiting agents to sofa and bench seats, then returns them to work when active again.
 - Includes the original office layout editor, furniture assets, character sprites, and overlays.
 - Saves custom layouts from the browser service.

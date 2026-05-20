@@ -792,6 +792,12 @@ export class OfficeState {
     ch.outputTokens = outputTokens;
   }
 
+  setAgentAlias(id: number, aliasName: string | undefined): void {
+    const ch = this.characters.get(id);
+    if (!ch) return;
+    ch.aliasName = aliasName;
+  }
+
   update(dt: number): void {
     // Furniture animation cycling
     const prevFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
