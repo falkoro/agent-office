@@ -11,6 +11,7 @@ interface BottomToolbarProps {
   onToggleEditMode: () => void;
   isSettingsOpen: boolean;
   onToggleSettings: () => void;
+  onOpenService: () => void;
   workspaceFolders: WorkspaceFolder[];
   canLaunchAgents?: boolean;
   agentCount?: number;
@@ -23,6 +24,7 @@ export function BottomToolbar({
   onToggleEditMode,
   isSettingsOpen,
   onToggleSettings,
+  onOpenService,
   workspaceFolders,
   canLaunchAgents = true,
   agentCount = 0,
@@ -165,6 +167,9 @@ export function BottomToolbar({
         title="Settings"
       >
         Settings
+      </Button>
+      <Button variant="default" onClick={onOpenService} title="Service health and setup">
+        Service
       </Button>
     </div>
   );

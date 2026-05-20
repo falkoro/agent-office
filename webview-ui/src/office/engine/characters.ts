@@ -110,7 +110,6 @@ export function updateCharacter(
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
         if (ch.holdSeat) {
-          ch.frame = 0;
           break;
         }
         if (ch.seatTimer > 0) {

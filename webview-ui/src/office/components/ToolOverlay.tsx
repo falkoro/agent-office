@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { cleanActivityText } from '../../agentDisplay.js';
+import { getAgentNumbers } from '../../agentNumbers.js';
 import { Button } from '../../components/ui/Button.js';
 import {
   CHARACTER_SITTING_OFFSET_PX,
@@ -229,15 +230,7 @@ export function ToolOverlay({
   // All character IDs
   const allIds = [...agents, ...subagentCharacters.map((s) => s.id)];
   const overlayItems: OverlayItem[] = [];
-  const agentNumbers = new Map<number, string>();
-  agents.forEach((id, index) => agentNumbers.set(id, (index + 1).toString()));
-  const subagentCountsByParent = new Map<number, number>();
-  for (const sub of subagentCharacters) {
-    const parentNumber = agentNumbers.get(sub.parentAgentId) ?? sub.parentAgentId.toString();
-    const nextCount = (subagentCountsByParent.get(sub.parentAgentId) ?? 0) + 1;
-    subagentCountsByParent.set(sub.parentAgentId, nextCount);
-    agentNumbers.set(sub.id, `${parentNumber}.${nextCount.toString()}`);
-  }
+  const agentNumbers = getAgentNumbers(agents, subagentCharacters);
   const denseCompact =
     rect.width < 980 || allIds.length > Math.max(6, Math.floor(rect.width / 170));
 

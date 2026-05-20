@@ -7,6 +7,7 @@ import {
   getProviderName,
   getSubagentDisplayName,
 } from '../agentDisplay.js';
+import type { AgentEvent } from '../hooks/useAgentTimeline.js';
 import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { ToolActivity } from '../office/types.js';
@@ -20,6 +21,7 @@ interface AgentDetailDrawerProps {
   subagentCharacters: SubagentCharacter[];
   agentStatuses: Record<number, string>;
   aliases: AgentAliases;
+  events: AgentEvent[];
   onAliasChange: (agentId: number, alias: string) => void;
   onClose: () => void;
   onFocusAgent: (agentId: number) => void;
@@ -38,6 +40,7 @@ export function AgentDetailDrawer({
   subagentCharacters,
   agentStatuses,
   aliases,
+  events,
   onAliasChange,
   onClose,
   onFocusAgent,
@@ -165,6 +168,26 @@ export function AgentDetailDrawer({
                   </div>
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <div className="mt-12">
+          <div className="text-2xs text-text-muted mb-4">History</div>
+          <div className="flex flex-col gap-4">
+            {events.slice(0, 6).map((event) => (
+              <button
+                key={event.id}
+                className="bg-bg-dark border-2 border-border px-6 py-4 text-2xs text-left cursor-default"
+                title={event.activity}
+              >
+                <div className="truncate">{event.activity}</div>
+                <div className="text-text-muted">
+                  {new Date(event.timestamp).toLocaleTimeString()}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}

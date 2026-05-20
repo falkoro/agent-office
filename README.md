@@ -46,6 +46,8 @@ PRs, provider adapters, layouts, bug reports, and feature requests are very welc
 - Shows a bell in the title and toolbar when approval is needed.
 - Collects pending confirmations in an approval inbox grouped beside provider counts.
 - Lets you click an agent to inspect activity, tokens, workspace, and set a friendly name.
+- Adds a numbered roster, live event timeline, and per-agent history for busy rooms.
+- Includes a service health and setup wizard for WSL/systemd and Windows Task Scheduler.
 - Includes a fit-to-page control that recenters the office around the visible workspace.
 - Sends waiting agents to sofa and bench seats, then returns them to work when active again.
 - Includes the original office layout editor, furniture assets, character sprites, and overlays.

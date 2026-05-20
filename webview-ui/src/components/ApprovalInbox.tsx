@@ -6,6 +6,7 @@ import {
   getApprovalItems,
   getProviderName,
 } from '../agentDisplay.js';
+import { getAgentNumbers } from '../agentNumbers.js';
 import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { ToolActivity } from '../office/types.js';
@@ -38,6 +39,7 @@ export function ApprovalInbox({
     subagentTools,
     subagentCharacters,
   );
+  const numbers = getAgentNumbers(agents, subagentCharacters);
   const counts = new Map<string, number>();
   for (const id of agents) {
     const provider = getProviderName(officeState.characters.get(id));
@@ -97,7 +99,12 @@ export function ApprovalInbox({
                     setOpen(false);
                   }}
                 >
-                  <div className="text-sm truncate">{item.label}</div>
+                  <div className="flex items-center gap-5 min-w-0">
+                    <span className="shrink-0 w-24 h-24 flex items-center justify-center bg-bg border-2 border-border text-2xs leading-none">
+                      {numbers.get(item.id) ?? item.id}
+                    </span>
+                    <span className="text-sm truncate">{item.label}</span>
+                  </div>
                   {item.isSubagent && (
                     <div className="text-2xs text-text-muted truncate">
                       Subagent of{' '}

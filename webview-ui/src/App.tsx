@@ -3,18 +3,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { type AgentAliases, getAgentAliasKey } from './agentDisplay.js';
 import { toMajorMinor } from './changelogData.js';
 import { AgentDetailDrawer } from './components/AgentDetailDrawer.js';
+import { AgentRoster } from './components/AgentRoster.js';
 import { ApprovalInbox } from './components/ApprovalInbox.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
 import { DebugView } from './components/DebugView.js';
 import { EditActionBar } from './components/EditActionBar.js';
+import { EventTimeline } from './components/EventTimeline.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
+import { ServicePanel } from './components/ServicePanel.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { Tooltip } from './components/Tooltip.js';
 import { Modal } from './components/ui/Modal.js';
 import { VersionIndicator } from './components/VersionIndicator.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { ZOOM_MAX, ZOOM_MIN } from './constants.js';
+import { useAgentTimeline } from './hooks/useAgentTimeline.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { useExtensionMessages } from './hooks/useExtensionMessages.js';
@@ -155,6 +159,7 @@ function App() {
 
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isServicePanelOpen, setIsServicePanelOpen] = useState(false);
   const [isHooksInfoOpen, setIsHooksInfoOpen] = useState(false);
   const [hooksTooltipDismissed, setHooksTooltipDismissed] = useState(false);
   const [isDebugMode, setIsDebugMode] = useState(false);
@@ -211,6 +216,16 @@ function App() {
       os.setAgentAlias(id, agentAliases[getAgentAliasKey(ch, id)]);
     }
   }, [agents, agentAliases]);
+
+  const { events, getHistoryForAgent } = useAgentTimeline({
+    officeState: getOfficeState(),
+    agents,
+    agentTools,
+    agentStatuses,
+    subagentTools,
+    subagentCharacters,
+    aliases: agentAliases,
+  });
 
   const handleSelectAgent = useCallback((id: number) => {
     const os = getOfficeState();
@@ -369,6 +384,18 @@ function App() {
             onSelectAgent={handleSelectAgent}
           />
 
+          <AgentRoster
+            officeState={officeState}
+            agents={agents}
+            agentTools={agentTools}
+            agentStatuses={agentStatuses}
+            subagentTools={subagentTools}
+            subagentCharacters={subagentCharacters}
+            aliases={agentAliases}
+            selectedAgentId={selectedOfficeAgent}
+            onSelectAgent={handleSelectAgent}
+          />
+
           {/* Vignette overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -437,6 +464,7 @@ function App() {
             subagentCharacters={subagentCharacters}
             agentStatuses={agentStatuses}
             aliases={agentAliases}
+            events={selectedOfficeAgent === null ? [] : getHistoryForAgent(selectedOfficeAgent)}
             onAliasChange={handleAgentAliasChange}
             onClose={() => {
               officeState.selectedAgentId = null;
@@ -445,6 +473,8 @@ function App() {
             }}
             onFocusAgent={handleSelectAgent}
           />
+
+          <EventTimeline events={events} onSelectAgent={handleSelectAgent} />
         </>
       ) : (
         <DebugView
@@ -521,6 +551,7 @@ function App() {
         onToggleEditMode={editor.handleToggleEditMode}
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
+        onOpenService={() => setIsServicePanelOpen(true)}
         workspaceFolders={workspaceFolders}
         canLaunchAgents={!isBrowserRuntime}
         agentCount={agents.length}
@@ -560,6 +591,12 @@ function App() {
           setHooksEnabled(newVal);
           vscode.postMessage({ type: 'setHooksEnabled', enabled: newVal });
         }}
+      />
+
+      <ServicePanel
+        isOpen={isServicePanelOpen}
+        onClose={() => setIsServicePanelOpen(false)}
+        agentCount={agents.length}
       />
 
       {showMigrationNotice && (
