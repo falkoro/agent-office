@@ -351,6 +351,20 @@ export function useExtensionMessages(
       } else if (msg.type === 'subagentToolPermission') {
         const id = msg.id as number;
         const parentToolId = msg.parentToolId as string;
+        setSubagentTools((prev) => {
+          const agentSubs = prev[id];
+          const list = agentSubs?.[parentToolId];
+          if (!agentSubs || !list) return prev;
+          return {
+            ...prev,
+            [id]: {
+              ...agentSubs,
+              [parentToolId]: list.map((tool) =>
+                tool.done ? tool : { ...tool, permissionWait: true },
+              ),
+            },
+          };
+        });
         // Show permission bubble on the sub-agent character
         const subId = os.getSubagentId(id, parentToolId);
         if (subId !== null) {
@@ -369,6 +383,20 @@ export function useExtensionMessages(
           };
         });
         os.clearPermissionBubble(id);
+        setSubagentTools((prev) => {
+          const agentSubs = prev[id];
+          if (!agentSubs) return prev;
+          let changed = false;
+          const nextSubs: Record<string, ToolActivity[]> = {};
+          for (const [parentToolId, tools] of Object.entries(agentSubs)) {
+            nextSubs[parentToolId] = tools.map((tool) => {
+              if (!tool.permissionWait) return tool;
+              changed = true;
+              return { ...tool, permissionWait: false };
+            });
+          }
+          return changed ? { ...prev, [id]: nextSubs } : prev;
+        });
         // Also clear permission bubbles on all sub-agent characters of this parent
         for (const [subId, meta] of os.subagentMeta) {
           if (meta.parentAgentId === id) {
@@ -386,7 +414,10 @@ export function useExtensionMessages(
           if (list.some((t) => t.toolId === toolId)) return prev;
           return {
             ...prev,
-            [id]: { ...agentSubs, [parentToolId]: [...list, { toolId, status, done: false }] },
+            [id]: {
+              ...agentSubs,
+              [parentToolId]: [...list, { toolId, status, done: false, permissionWait: false }],
+            },
           };
         });
         // Update sub-agent character's tool and active state (if already created by

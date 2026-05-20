@@ -214,10 +214,12 @@ function App() {
 
   const handleSelectAgent = useCallback((id: number) => {
     const os = getOfficeState();
+    const meta = os.subagentMeta.get(id);
+    const focusId = meta ? meta.parentAgentId : id;
     os.selectedAgentId = id;
     os.cameraFollowId = id;
     setSelectedOfficeAgent(id);
-    vscode.postMessage({ type: 'focusAgent', id });
+    vscode.postMessage({ type: 'focusAgent', id: focusId });
   }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -361,6 +363,8 @@ function App() {
             officeState={officeState}
             agents={agents}
             agentTools={agentTools}
+            subagentTools={subagentTools}
+            subagentCharacters={subagentCharacters}
             aliases={agentAliases}
             onSelectAgent={handleSelectAgent}
           />
@@ -416,6 +420,7 @@ function App() {
             officeState={officeState}
             agents={agents}
             agentTools={agentTools}
+            subagentTools={subagentTools}
             subagentCharacters={subagentCharacters}
             containerRef={containerRef}
             zoom={editor.zoom}
@@ -428,6 +433,8 @@ function App() {
             officeState={officeState}
             agentId={selectedOfficeAgent}
             agentTools={agentTools}
+            subagentTools={subagentTools}
+            subagentCharacters={subagentCharacters}
             agentStatuses={agentStatuses}
             aliases={agentAliases}
             onAliasChange={handleAgentAliasChange}

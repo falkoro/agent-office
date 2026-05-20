@@ -6,6 +6,7 @@ import {
   getApprovalItems,
   getProviderName,
 } from '../agentDisplay.js';
+import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { ToolActivity } from '../office/types.js';
 import { Button } from './ui/Button.js';
@@ -14,6 +15,8 @@ interface ApprovalInboxProps {
   officeState: OfficeState;
   agents: number[];
   agentTools: Record<number, ToolActivity[]>;
+  subagentTools: Record<number, Record<string, ToolActivity[]>>;
+  subagentCharacters: SubagentCharacter[];
   aliases: AgentAliases;
   onSelectAgent: (agentId: number) => void;
 }
@@ -22,11 +25,19 @@ export function ApprovalInbox({
   officeState,
   agents,
   agentTools,
+  subagentTools,
+  subagentCharacters,
   aliases,
   onSelectAgent,
 }: ApprovalInboxProps) {
   const [open, setOpen] = useState(false);
-  const approvals = getApprovalItems(officeState, agentTools, aliases);
+  const approvals = getApprovalItems(
+    officeState,
+    agentTools,
+    aliases,
+    subagentTools,
+    subagentCharacters,
+  );
   const counts = new Map<string, number>();
   for (const id of agents) {
     const provider = getProviderName(officeState.characters.get(id));
@@ -86,9 +97,13 @@ export function ApprovalInbox({
                     setOpen(false);
                   }}
                 >
-                  <div className="text-sm truncate">
-                    {getAgentDisplayName(officeState, item.id, aliases)}
-                  </div>
+                  <div className="text-sm truncate">{item.label}</div>
+                  {item.isSubagent && (
+                    <div className="text-2xs text-text-muted truncate">
+                      Subagent of{' '}
+                      {getAgentDisplayName(officeState, item.parentAgentId ?? item.id, aliases)}
+                    </div>
+                  )}
                   <div className="text-2xs text-warning truncate">{item.status}</div>
                 </button>
               ))}

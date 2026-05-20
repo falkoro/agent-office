@@ -1,3 +1,4 @@
+import type { SubagentCharacter } from './hooks/useExtensionMessages.js';
 import type { OfficeState } from './office/engine/officeState.js';
 import type { Character, ToolActivity } from './office/types.js';
 
@@ -8,6 +9,8 @@ export interface ApprovalItem {
   label: string;
   status: string;
   toolId: string;
+  parentAgentId?: number;
+  isSubagent?: boolean;
 }
 
 export function getAgentAliasKey(ch: Character | undefined, id: number): string {
@@ -36,6 +39,24 @@ export function getAgentDisplayName(
   return getBaseAgentName(ch, id);
 }
 
+export function getSubagentDisplayName(
+  officeState: OfficeState,
+  id: number,
+  aliases: AgentAliases,
+  subagentCharacters: SubagentCharacter[],
+): string {
+  const ch = officeState.characters.get(id);
+  if (!ch?.isSubagent) return getAgentDisplayName(officeState, id, aliases);
+
+  const meta = officeState.subagentMeta.get(id);
+  const sub = subagentCharacters.find((item) => item.id === id);
+  const label = sub?.label || 'Subagent';
+  if (!meta) return label;
+
+  const parentName = getAgentDisplayName(officeState, meta.parentAgentId, aliases);
+  return `${parentName} / ${label}`;
+}
+
 export function getAgentActivity(
   tools: ToolActivity[] | undefined,
   ch: Character | undefined,
@@ -57,6 +78,8 @@ export function getApprovalItems(
   officeState: OfficeState,
   agentTools: Record<number, ToolActivity[]>,
   aliases: AgentAliases,
+  subagentTools: Record<number, Record<string, ToolActivity[]>> = {},
+  subagentCharacters: SubagentCharacter[] = [],
 ): ApprovalItem[] {
   const items: ApprovalItem[] = [];
   for (const [rawId, tools] of Object.entries(agentTools)) {
@@ -69,6 +92,28 @@ export function getApprovalItems(
         status: tool.status,
         toolId: tool.toolId,
       });
+    }
+  }
+  for (const [rawParentId, toolsByParentTool] of Object.entries(subagentTools)) {
+    const parentAgentId = Number(rawParentId);
+    for (const [parentToolId, tools] of Object.entries(toolsByParentTool)) {
+      const subId =
+        officeState.getSubagentId(parentAgentId, parentToolId) ??
+        subagentCharacters.find(
+          (sub) => sub.parentAgentId === parentAgentId && sub.parentToolId === parentToolId,
+        )?.id ??
+        parentAgentId;
+      for (const tool of tools) {
+        if (!tool.permissionWait || tool.done) continue;
+        items.push({
+          id: subId,
+          label: getSubagentDisplayName(officeState, subId, aliases, subagentCharacters),
+          status: tool.status,
+          toolId: `${parentToolId}:${tool.toolId}`,
+          parentAgentId,
+          isSubagent: subId !== parentAgentId,
+        });
+      }
     }
   }
   return items;

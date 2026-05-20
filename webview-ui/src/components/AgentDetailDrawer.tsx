@@ -1,4 +1,11 @@
-import { type AgentAliases, getAgentActivity, getAgentAliasKey } from '../agentDisplay.js';
+import {
+  type AgentAliases,
+  getAgentActivity,
+  getAgentAliasKey,
+  getAgentDisplayName,
+  getSubagentDisplayName,
+} from '../agentDisplay.js';
+import type { SubagentCharacter } from '../hooks/useExtensionMessages.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { ToolActivity } from '../office/types.js';
 import { Button } from './ui/Button.js';
@@ -7,6 +14,8 @@ interface AgentDetailDrawerProps {
   officeState: OfficeState;
   agentId: number | null;
   agentTools: Record<number, ToolActivity[]>;
+  subagentTools: Record<number, Record<string, ToolActivity[]>>;
+  subagentCharacters: SubagentCharacter[];
   agentStatuses: Record<number, string>;
   aliases: AgentAliases;
   onAliasChange: (agentId: number, alias: string) => void;
@@ -23,6 +32,8 @@ export function AgentDetailDrawer({
   officeState,
   agentId,
   agentTools,
+  subagentTools,
+  subagentCharacters,
   agentStatuses,
   aliases,
   onAliasChange,
@@ -34,35 +45,50 @@ export function AgentDetailDrawer({
   const ch = officeState.characters.get(agentId);
   if (!ch) return null;
 
-  const tools = agentTools[agentId] ?? [];
+  const meta = officeState.subagentMeta.get(agentId);
+  const isSubagent = ch.isSubagent && !!meta;
+  const subInfo = subagentCharacters.find((item) => item.id === agentId);
+  const tools = isSubagent
+    ? (subagentTools[meta.parentAgentId]?.[meta.parentToolId] ?? [])
+    : (agentTools[agentId] ?? []);
   const aliasKey = getAgentAliasKey(ch, agentId);
   const alias = aliases[aliasKey] ?? ch.aliasName ?? '';
   const activity = getAgentActivity(tools, ch, agentStatuses[agentId]);
   const status = agentStatuses[agentId] ?? (ch.isActive ? 'active' : 'idle');
   const totalTokens = ch.inputTokens + ch.outputTokens;
+  const title = isSubagent
+    ? getSubagentDisplayName(officeState, agentId, aliases, subagentCharacters)
+    : alias || ch.folderName || 'Agent';
+  const parentName = meta ? getAgentDisplayName(officeState, meta.parentAgentId, aliases) : null;
 
   return (
     <aside className="absolute top-70 right-10 bottom-80 z-30 w-320 max-w-[calc(100vw_-_20px)] pixel-panel p-10 overflow-y-auto">
       <div className="flex items-start justify-between gap-8 mb-10">
         <div className="min-w-0">
-          <div className="text-lg leading-none truncate">{alias || ch.folderName || 'Agent'}</div>
-          <div className="text-2xs text-text-muted leading-none mt-3">Agent {agentId}</div>
+          <div className="text-lg leading-none truncate">{title}</div>
+          <div className="text-2xs text-text-muted leading-none mt-3">
+            {isSubagent ? 'Subagent' : 'Agent'} {agentId}
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} title="Close details">
           ×
         </Button>
       </div>
 
-      <label className="block text-2xs text-text-muted mb-3" htmlFor="agent-alias">
-        Friendly name
-      </label>
-      <input
-        id="agent-alias"
-        value={alias}
-        onChange={(event) => onAliasChange(agentId, event.target.value)}
-        placeholder={ch.folderName || `Agent ${agentId.toString()}`}
-        className="w-full bg-bg-dark border-2 border-border text-text text-sm px-6 py-4 outline-none mb-10"
-      />
+      {!isSubagent && (
+        <>
+          <label className="block text-2xs text-text-muted mb-3" htmlFor="agent-alias">
+            Friendly name
+          </label>
+          <input
+            id="agent-alias"
+            value={alias}
+            onChange={(event) => onAliasChange(agentId, event.target.value)}
+            placeholder={ch.folderName || `Agent ${agentId.toString()}`}
+            className="w-full bg-bg-dark border-2 border-border text-text text-sm px-6 py-4 outline-none mb-10"
+          />
+        </>
+      )}
 
       <div className="grid grid-cols-[92px_1fr] gap-x-8 gap-y-6 text-sm">
         <span className="text-text-muted">Status</span>
@@ -73,6 +99,22 @@ export function AgentDetailDrawer({
         </span>
         <span className="text-text-muted">Seat</span>
         <span>{ch.seatId ?? 'none'}</span>
+        {parentName && (
+          <>
+            <span className="text-text-muted">Parent</span>
+            <span className="truncate" title={parentName}>
+              {parentName}
+            </span>
+          </>
+        )}
+        {subInfo?.label && (
+          <>
+            <span className="text-text-muted">Task</span>
+            <span className="truncate" title={subInfo.label}>
+              {subInfo.label}
+            </span>
+          </>
+        )}
         <span className="text-text-muted">Workspace</span>
         <span className="truncate" title={ch.folderName}>
           {ch.folderName ?? 'unknown'}
