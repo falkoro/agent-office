@@ -32,6 +32,10 @@ PRs, provider adapters, layouts, bug reports, and feature requests are very welc
 
 ![Agent Office screenshot](webview-ui/public/Screenshot.jpg)
 
+## Demo
+
+[Watch the browser demo](docs/assets/agent-office-demo.webm).
+
 ## What It Does
 
 - Shows local CLI agents as animated characters in a pixel office.
