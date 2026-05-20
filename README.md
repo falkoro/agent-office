@@ -5,7 +5,7 @@
 </h1>
 
 <h2 align="center" style="padding-bottom: 20px;">
-  The game interface where AI agents build real things
+  A browser office where local AI agents come to life
 </h2>
 
 <div align="center" style="margin-top: 25px;">
@@ -24,7 +24,9 @@
 
 <br/>
 
-Agent Office is a Bun-first standalone fork of Pixel Agents for watching local CLI agents from a browser. It keeps the original pixel office, adds WSL/systemd and Windows Task Scheduler runners, and observes Codex, Claude, OpenCode, and Antigravity CLI processes.
+Agent Office is a Bun-first browser dashboard for watching local CLI agents work together. It keeps the original Pixel Agents office, adds standalone WSL/systemd and Windows Task Scheduler runners, and observes Codex, Claude, OpenCode, and Antigravity from one shared view.
+
+PRs, provider adapters, layout ideas, and feature requests are welcome. The goal is simple: make local agent work visible, playful, and easier to supervise without locking it to one editor or one CLI.
 
 Pixel Agents turns multi-agent AI systems into something you can actually see and manage. Each agent becomes a character in a pixel art office. They walk around, sit at their desk, and visually reflect what they are doing — typing when writing code, reading when searching files, waiting when it needs your attention.
 
@@ -35,6 +37,8 @@ The standalone services serve the same pixel office in a browser and observe run
 Fork attribution is documented in [ATTRIBUTION.md](ATTRIBUTION.md). The original project is [pablodelucca/pixel-agents](https://github.com/pablodelucca/pixel-agents).
 
 Other deployment ideas are collected in [docs/deployment-options.md](docs/deployment-options.md).
+
+Have an idea or a CLI you want to see? Open a feature request in [Issues](https://github.com/falkoro/agent-office/issues), or start a longer design conversation in [Discussions](https://github.com/falkoro/agent-office/discussions).
 
 This is the source code for the free Pixel Agents extension for VS Code — install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=pablodelucca.pixel-agents) or [Open VSX](https://open-vsx.org/extension/pablodelucca/pixel-agents) with the full furniture catalog included.
 
