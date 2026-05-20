@@ -20,6 +20,7 @@ Thumbs.db
 # E2E test artifacts
 test-results/
 playwright-report/
+/artifacts/
 
 # Build artifacts
 *.vsix

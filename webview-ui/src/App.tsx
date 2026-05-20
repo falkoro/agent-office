@@ -40,7 +40,12 @@ function App() {
   // useExtensionMessages listener has been registered.
   useEffect(() => {
     if (isBrowserRuntime) {
-      void import('./browserMock.js').then(({ dispatchMockMessages }) => dispatchMockMessages());
+      void import('./browserMock.js').then(({ dispatchMockMessages }) => {
+        dispatchMockMessages();
+        void import('./standaloneClient.js').then(({ connectStandaloneEvents }) =>
+          connectStandaloneEvents(),
+        );
+      });
     }
   }, []);
 
@@ -326,6 +331,7 @@ function App() {
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
         workspaceFolders={workspaceFolders}
+        canLaunchAgents={!isBrowserRuntime}
       />
 
       <VersionIndicator

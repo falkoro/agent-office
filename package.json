@@ -6,7 +6,7 @@
   "publisher": "pablodelucca",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pablodelucca/pixel-agents"
+    "url": "https://github.com/falkoro/pixel-agents"
   },
   "icon": "icon.png",
   "license": "MIT",
@@ -52,7 +52,15 @@
     "vscode:prepublish": "npm run package",
     "build:webview": "cd webview-ui && npm run build",
     "compile": "npm run check-types && npm run lint && node esbuild.js && npm run build:webview",
-    "build": "npm run compile",
+    "build": "npm run compile && npm run build:standalone",
+    "build:standalone": "node standalone/esbuild.cjs",
+    "start:standalone": "bun standalone/server.ts",
+    "start:standalone:node": "node dist/standalone/server.js",
+    "verify:standalone": "node scripts/verify-standalone.cjs",
+    "install:wsl-service": "bash scripts/install-wsl-service.sh",
+    "uninstall:wsl-service": "bash scripts/uninstall-wsl-service.sh",
+    "install:windows-service": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-windows-service.ps1",
+    "uninstall:windows-service": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-windows-service.ps1",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
