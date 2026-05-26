@@ -22,5 +22,6 @@ versus remote/private setup examples.
 
 Agent Office is meant to observe local developer tools. The standalone server can reveal process
 counts, provider names, workspace labels, and recent activity hints. For remote or public-hostname
-access, use built-in Basic auth, Cloudflare Access, Tailscale, VPN auth, or an equivalent gate. Do
-not expose an unauthenticated instance directly to the internet.
+access, use Cloudflare Access, Tailscale, VPN auth, HTTPS reverse-proxy auth, or an equivalent gate.
+Built-in Basic auth is available for simple private deployments, but should travel over TLS or a
+trusted private network. Do not expose an unauthenticated instance directly to the internet.
