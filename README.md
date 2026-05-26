@@ -17,6 +17,8 @@
   ·
   <a href="docs/windows-standalone-service.md">Windows service</a>
   ·
+  <a href="docs/self-hosting.md">Self-hosting</a>
+  ·
   <a href="ATTRIBUTION.md">Attribution</a>
 </p>
 
@@ -104,7 +106,7 @@ The Windows runner uses Task Scheduler. For a true Windows Service Control Manag
 ## Run Once
 
 ```bash
-PIXEL_AGENTS_PORT=4627 bun run start:standalone
+AGENT_OFFICE_PORT=4627 bun run start:standalone
 ```
 
 Node remains available as a fallback:
@@ -113,6 +115,27 @@ Node remains available as a fallback:
 bun run build:standalone
 bun run start:standalone:node
 ```
+
+## Self-Hosting
+
+Agent Office is meant to be self-hosted by the person running the agents. Local-only use needs no
+extra configuration:
+
+```env
+AGENT_OFFICE_HOST=127.0.0.1
+AGENT_OFFICE_PORT=4627
+```
+
+If you bind to `0.0.0.0` or put it on a hostname, protect it with Cloudflare Access, Tailscale, VPN
+auth, a reverse-proxy access policy, or the built-in HTTP Basic auth:
+
+```env
+AGENT_OFFICE_HOST=0.0.0.0
+AGENT_OFFICE_AUTH_USER=agent-office
+AGENT_OFFICE_AUTH_PASSWORD=replace-with-a-long-random-password
+```
+
+See [Self-Hosting](docs/self-hosting.md) for the full configuration table.
 
 ## Supported Agents
 
@@ -129,8 +152,7 @@ The standalone server is intentionally observational. It watches process metadat
 state/log files without requiring agent CLIs to be modified.
 
 Because the dashboard shows local process status, workspaces, and recent activity hints, keep it on
-localhost or place it behind an access-controlled tunnel/reverse proxy before exposing it outside
-your machine.
+localhost or place it behind auth before exposing it outside your machine.
 
 ## Development
 

@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_NAME="${SERVICE_NAME:-agent-office-wsl}"
 LEGACY_SERVICE_NAME="${LEGACY_SERVICE_NAME:-pixel-agents-wsl}"
-PORT="${PIXEL_AGENTS_PORT:-4627}"
-HOST="${PIXEL_AGENTS_HOST:-0.0.0.0}"
+PORT="${AGENT_OFFICE_PORT:-${PIXEL_AGENTS_PORT:-4627}}"
+HOST="${AGENT_OFFICE_HOST:-${PIXEL_AGENTS_HOST:-127.0.0.1}}"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 RUN_USER="${SUDO_USER:-$USER}"
 
@@ -57,9 +57,9 @@ Type=simple
 User=${RUN_USER}
 WorkingDirectory=${ROOT}
 Environment=NODE_ENV=production
-Environment=PIXEL_AGENTS_HOST=${HOST}
-Environment=PIXEL_AGENTS_PORT=${PORT}
-Environment=PIXEL_AGENTS_WEB_ROOT=${ROOT}/dist/webview
+Environment=AGENT_OFFICE_HOST=${HOST}
+Environment=AGENT_OFFICE_PORT=${PORT}
+Environment=AGENT_OFFICE_WEB_ROOT=${ROOT}/dist/webview
 ExecStart=${EXEC_START}
 Restart=on-failure
 RestartSec=2
