@@ -25,7 +25,7 @@ running agent becomes a character you can see at a glance: working at a desk, wa
 or asking for approval with a visible bell signal in the browser tab.
 
 It is Bun-first, runs in a normal browser, and ships with service runners for WSL/systemd and
-Windows Task Scheduler. Today it observes Codex, Claude, OpenCode, Antigravity, and Goose
+Windows Task Scheduler. Today it observes Codex, Claude, Grok, OpenCode, Antigravity, and Goose
 processes, with room for more provider adapters.
 
 PRs, provider adapters, layouts, bug reports, and feature requests are very welcome.
@@ -42,6 +42,7 @@ PRs, provider adapters, layouts, bug reports, and feature requests are very welc
 - Serves the office in a browser at `http://localhost:4627`.
 - Runs as a WSL systemd service or a Windows background scheduled task.
 - Detects Codex, Claude, OpenCode, Antigravity/`agy`, and Goose processes.
+- Detects Grok TUI sessions through a lightweight local activity log.
 - Shows live browser title counts like `(4) Agent Office`.
 - Shows a bell in the title and toolbar when approval is needed.
 - Collects pending confirmations in an approval inbox grouped beside provider counts.
@@ -119,12 +120,17 @@ bun run start:standalone:node
 | ----------- | ------------------------ | ------------------------------------------- |
 | Codex       | `codex`, `@openai/codex` | `~/.codex/log/codex-tui.log`                |
 | Claude      | `claude`                 | `~/.claude/projects/**/*.jsonl`             |
+| Grok        | `grok`                   | `~/.grok/agent-activity.log`                |
 | OpenCode    | `opencode`               | `~/.local/share/opencode/storage/**/*.json` |
 | Antigravity | `agy`, `antigravity`     | common Antigravity config/cache log folders |
 | Goose       | `goose`, `@block/goose`  | common Goose config/cache log folders       |
 
 The standalone server is intentionally observational. It watches process metadata and common local
 state/log files without requiring agent CLIs to be modified.
+
+Because the dashboard shows local process status, workspaces, and recent activity hints, keep it on
+localhost or place it behind an access-controlled tunnel/reverse proxy before exposing it outside
+your machine.
 
 ## Development
 
