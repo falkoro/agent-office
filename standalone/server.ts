@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { URL } from 'url';
 
-type ProviderId = 'codex' | 'claude' | 'opencode' | 'antigravity' | 'goose';
+type ProviderId = 'codex' | 'claude' | 'opencode' | 'antigravity' | 'goose' | 'grok';
 
 interface ProcessInfo {
   pid: number;
@@ -15,6 +15,7 @@ interface ProcessInfo {
   cwd: string;
   cpuTicks: number;
   startedSecondsAgo: number;
+  state: string;
 }
 
 interface AgentRecord {
@@ -54,12 +55,14 @@ const providerLabels: Record<ProviderId, string> = {
   opencode: 'OpenCode',
   antigravity: 'Antigravity',
   goose: 'Goose',
+  grok: 'Grok',
 };
 
 const agents = new Map<string, AgentRecord>();
 const clients = new Set<http.ServerResponse>();
 const providerActivities = new Map<ProviderId, ProviderActivity>();
 const providerFileMtimes = new Map<ProviderId, number>();
+const LEGACY_CLIENT_AGENT_RESET_LIMIT = 512;
 let nextAgentId = 1;
 
 const startedAt = Date.now();
@@ -134,6 +137,10 @@ function handleEvents(res: http.ServerResponse): void {
   res.write(': connected\n\n');
   clients.add(res);
 
+  sendToClient(res, { type: 'agentsReset' });
+  for (let id = 1; id <= LEGACY_CLIENT_AGENT_RESET_LIMIT; id += 1) {
+    sendToClient(res, { type: 'agentClosed', id });
+  }
   sendToClient(res, {
     type: 'settingsLoaded',
     soundEnabled: false,
@@ -241,7 +248,7 @@ function listLinuxAgentProcesses(): ProcessInfo[] {
     return [];
   }
 
-  const processes: ProcessInfo[] = [];
+  const allProcesses: ProcessInfo[] = [];
   for (const entry of entries) {
     if (!/^\d+$/.test(entry)) continue;
     const pid = Number(entry);
@@ -263,14 +270,14 @@ function listLinuxAgentProcesses(): ProcessInfo[] {
       cwd,
       cpuTicks: stat.utime + stat.stime,
       startedSecondsAgo: stat.startedSecondsAgo,
+      state: stat.state,
     };
 
-    if (identifyProvider(processInfo)) {
-      processes.push(processInfo);
-    }
+    allProcesses.push(processInfo);
   }
 
-  return filterTrackedAgentProcesses(processes).sort((a, b) => a.pid - b.pid);
+  const providerProcesses = allProcesses.filter((processInfo) => identifyProvider(processInfo));
+  return filterTrackedAgentProcesses(providerProcesses, allProcesses).sort((a, b) => a.pid - b.pid);
 }
 
 function listWindowsAgentProcesses(): ProcessInfo[] {
@@ -310,16 +317,17 @@ function listWindowsAgentProcesses(): ProcessInfo[] {
         cwd: os.homedir(),
         cpuTicks: getWindowsProcessCpuTicks(pid),
         startedSecondsAgo: 0,
+        state: 'R',
       };
     })
     .filter((proc) => proc.pid > 0 && identifyProvider(proc));
 
-  return filterTrackedAgentProcesses(processes).sort((a, b) => a.pid - b.pid);
+  return filterTrackedAgentProcesses(processes, processes).sort((a, b) => a.pid - b.pid);
 }
 
 function identifyProvider(proc: ProcessInfo): ProviderId | null {
   const executableNames = [proc.comm, ...proc.args.slice(0, 4).map((arg) => path.basename(arg))]
-    .map((name) => name.toLowerCase().replace(/\.(cmd|exe|js|mjs|cjs)$/i, ''))
+    .map(normalizeExecutableName)
     .filter(Boolean);
   const executableText = proc.args.slice(0, 4).join(' ').toLowerCase();
 
@@ -329,11 +337,15 @@ function identifyProvider(proc: ProcessInfo): ProviderId | null {
   if (executableNames.includes('agy') || executableNames.includes('antigravity'))
     return 'antigravity';
   if (executableNames.includes('goose') || executableText.includes('@block/goose')) return 'goose';
+  if (executableNames.includes('grok')) return 'grok';
 
   return null;
 }
 
-function filterTrackedAgentProcesses(processes: ProcessInfo[]): ProcessInfo[] {
+function filterTrackedAgentProcesses(
+  processes: ProcessInfo[],
+  allProcesses: ProcessInfo[],
+): ProcessInfo[] {
   const processProviders = new Map<number, ProviderId>();
   for (const proc of processes) {
     const provider = identifyProvider(proc);
@@ -343,19 +355,30 @@ function filterTrackedAgentProcesses(processes: ProcessInfo[]): ProcessInfo[] {
   const filtered = processes.filter((proc) => {
     const provider = processProviders.get(proc.pid);
     if (!provider) return false;
+    if (isInactiveProcess(proc)) return false;
     if (isHelperProcess(proc, provider)) return false;
     if (isWrapperProcessWithProviderChild(proc, provider, processes, processProviders))
       return false;
     return true;
   });
 
-  return filtered;
+  return filterToTmuxPaneRepresentatives(filtered, allProcesses);
+}
+
+function isInactiveProcess(proc: ProcessInfo): boolean {
+  return (
+    proc.state === 'Z' ||
+    proc.state === 'X' ||
+    proc.state === 'x' ||
+    proc.state === 'T' ||
+    proc.state === 't'
+  );
 }
 
 function isHelperProcess(proc: ProcessInfo, provider: ProviderId): boolean {
   const text = proc.args.join(' ').toLowerCase();
   const names = [proc.comm, ...proc.args.slice(0, 4).map((arg) => path.basename(arg))]
-    .map((name) => name.toLowerCase().replace(/\.(cmd|exe|js|mjs|cjs)$/i, ''))
+    .map(normalizeExecutableName)
     .filter(Boolean);
 
   if (text.split(/\s+/).includes('mcp-server')) return true;
@@ -374,6 +397,7 @@ function isWrapperProcessWithProviderChild(
   processProviders: Map<number, ProviderId>,
 ): boolean {
   const comm = proc.comm.toLowerCase().replace(/\.(cmd|exe)$/i, '');
+  const normalizedComm = normalizeExecutableName(comm);
   const wrapperNames = new Set([
     'node',
     'bun',
@@ -385,7 +409,7 @@ function isWrapperProcessWithProviderChild(
     'pwsh',
     'powershell',
   ]);
-  if (!wrapperNames.has(comm)) return false;
+  if (!wrapperNames.has(normalizedComm)) return false;
 
   return processes.some(
     (candidate) =>
@@ -393,6 +417,93 @@ function isWrapperProcessWithProviderChild(
       processProviders.get(candidate.pid) === provider &&
       !isHelperProcess(candidate, provider),
   );
+}
+
+function filterToTmuxPaneRepresentatives(
+  processes: ProcessInfo[],
+  allProcesses: ProcessInfo[],
+): ProcessInfo[] {
+  if (process.platform !== 'linux') return processes;
+
+  const paneRootPids = listTmuxPaneRootPids();
+  if (paneRootPids.size === 0) return processes;
+
+  const parentByPid = new Map(allProcesses.map((proc) => [proc.pid, proc.ppid]));
+  const processesByPane = new Map<number, ProcessInfo[]>();
+
+  for (const proc of processes) {
+    const paneRootPid = findAncestorPid(proc.pid, paneRootPids, parentByPid);
+    if (!paneRootPid) continue;
+    const group = processesByPane.get(paneRootPid) ?? [];
+    group.push(proc);
+    processesByPane.set(paneRootPid, group);
+  }
+
+  return [...processesByPane.values()].map((group) =>
+    selectRepresentativeProcess(group, parentByPid),
+  );
+}
+
+function listTmuxPaneRootPids(): Set<number> {
+  try {
+    const output = execFileSync('tmux', ['list-panes', '-a', '-F', '#{pane_pid}'], {
+      encoding: 'utf-8',
+      timeout: 1000,
+      windowsHide: true,
+    });
+    return new Set(
+      output
+        .split(/\r?\n/)
+        .map((line) => Number(line.trim()))
+        .filter((pid) => Number.isInteger(pid) && pid > 0),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function findAncestorPid(
+  pid: number,
+  candidateAncestors: Set<number>,
+  parentByPid: Map<number, number>,
+): number | undefined {
+  let current = pid;
+  const visited = new Set<number>();
+  while (current > 1 && !visited.has(current)) {
+    if (candidateAncestors.has(current)) return current;
+    visited.add(current);
+    current = parentByPid.get(current) ?? 0;
+  }
+  return undefined;
+}
+
+function selectRepresentativeProcess(
+  processes: ProcessInfo[],
+  parentByPid: Map<number, number>,
+): ProcessInfo {
+  const leafProcesses = processes.filter(
+    (proc) => !processes.some((candidate) => isAncestorPid(proc.pid, candidate.pid, parentByPid)),
+  );
+  const candidates = leafProcesses.length > 0 ? leafProcesses : processes;
+  return candidates
+    .slice()
+    .sort((a, b) => a.startedSecondsAgo - b.startedSecondsAgo || b.cpuTicks - a.cpuTicks)[0]!;
+}
+
+function isAncestorPid(
+  possibleAncestor: number,
+  pid: number,
+  parentByPid: Map<number, number>,
+): boolean {
+  if (possibleAncestor === pid) return false;
+  return findAncestorPid(pid, new Set([possibleAncestor]), parentByPid) === possibleAncestor;
+}
+
+function normalizeExecutableName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\.(cmd|exe|js|mjs|cjs)$/i, '')
+    .replace(/-mainthread$/, '');
 }
 
 function buildAgentLabel(provider: ProviderId, proc: ProcessInfo): string {
@@ -407,6 +518,7 @@ function updateProviderActivities(): void {
     getOpenCodeActivity(),
     getAntigravityActivity(),
     getGooseActivity(),
+    getGrokActivity(),
   ];
 
   for (const activity of nextActivities) {
@@ -480,6 +592,24 @@ function readGooseHint(file: string): string {
   if (/grep|search|find|read/i.test(raw)) return 'reading';
   if (/shell|command|exec|terminal/i.test(raw)) return 'running command';
   return 'working';
+}
+
+function getGrokActivity(): ProviderActivity {
+  const file = path.join(os.homedir(), '.grok', 'agent-activity.log');
+  const mtimeMs = getMtimeMs(file);
+  const tail = readTail(file, 32 * 1024);
+  const lines = tail
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const last = lines.at(-1) || '';
+  // Special branding for Grok 4.3 (xAI) so it stands out nicely in the pixel office
+  const text = last
+    ? last.startsWith('Grok 4.3')
+      ? last
+      : `Grok 4.3 (xAI): ${last}`
+    : 'Grok 4.3 (xAI TUI): active — tool calls & agent work';
+  return { provider: 'grok', text, file, mtimeMs, changed: false };
 }
 
 function splitWindowsCommandLine(commandLine: string): string[] {
@@ -769,12 +899,13 @@ function toAgentSummary(agent: AgentRecord): Record<string, unknown> {
 
 function readProcStat(
   filePath: string,
-): { ppid: number; utime: number; stime: number; startedSecondsAgo: number } | null {
+): { ppid: number; utime: number; stime: number; startedSecondsAgo: number; state: string } | null {
   const raw = readText(filePath);
   if (!raw) return null;
   const closeParen = raw.lastIndexOf(')');
   if (closeParen === -1) return null;
   const fields = raw.slice(closeParen + 2).split(' ');
+  const state = fields[0] || '';
   const ppid = Number(fields[1] || 0);
   const utime = Number(fields[11] || 0);
   const stime = Number(fields[12] || 0);
@@ -782,7 +913,7 @@ function readProcStat(
   const uptimeSeconds = Number(readText('/proc/uptime').split(' ')[0] || 0);
   const clockTicks = 100;
   const startedSecondsAgo = Math.max(0, Math.floor(uptimeSeconds - starttime / clockTicks));
-  return { ppid, utime, stime, startedSecondsAgo };
+  return { ppid, utime, stime, startedSecondsAgo, state };
 }
 
 function newestFile(root: string, suffix: string): string | undefined {
