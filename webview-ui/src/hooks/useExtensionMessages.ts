@@ -77,6 +77,18 @@ function saveAgentSeats(os: OfficeState): void {
   vscode.postMessage({ type: 'saveAgentSeats', seats });
 }
 
+function resetAgentState(os: OfficeState): void {
+  for (const seat of os.seats.values()) {
+    seat.assigned = false;
+  }
+  os.characters.clear();
+  os.subagentIdMap.clear();
+  os.subagentMeta.clear();
+  os.selectedAgentId = null;
+  os.cameraFollowId = null;
+  os.hoveredAgentId = null;
+}
+
 export function useExtensionMessages(
   getOfficeState: () => OfficeState,
   onLayoutLoaded?: (layout: OfficeLayout) => void,
@@ -121,7 +133,16 @@ export function useExtensionMessages(
       const msg = e.data;
       const os = getOfficeState();
 
-      if (msg.type === 'layoutLoaded') {
+      if (msg.type === 'agentsReset') {
+        pendingAgents = [];
+        resetAgentState(os);
+        setAgents([]);
+        setSelectedAgent(null);
+        setAgentTools({});
+        setAgentStatuses({});
+        setSubagentTools({});
+        setSubagentCharacters([]);
+      } else if (msg.type === 'layoutLoaded') {
         // Skip external layout updates while editor has unsaved changes
         if (layoutReadyRef.current && isEditDirty?.()) {
           console.log('[Webview] Skipping external layout update — editor has unsaved changes');
