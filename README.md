@@ -127,7 +127,8 @@ AGENT_OFFICE_PORT=4627
 ```
 
 If you bind to `0.0.0.0` or put it on a hostname, protect it with Cloudflare Access, Tailscale, VPN
-auth, a reverse-proxy access policy, or the built-in HTTP Basic auth:
+auth, a reverse-proxy access policy, or the built-in HTTP Basic auth. Use TLS or a private network
+when Basic auth is involved:
 
 ```env
 AGENT_OFFICE_HOST=0.0.0.0

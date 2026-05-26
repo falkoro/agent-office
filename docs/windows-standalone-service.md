@@ -78,4 +78,7 @@ AGENT_OFFICE_AUTH_USER=agent-office
 AGENT_OFFICE_AUTH_PASSWORD=replace-with-a-long-random-password
 ```
 
+Use built-in Basic auth only on a trusted private network or behind TLS. For a public hostname,
+prefer Cloudflare Access, Tailscale, VPN auth, or an HTTPS reverse proxy.
+
 See [Self-Hosting](self-hosting.md) for the full configuration table.

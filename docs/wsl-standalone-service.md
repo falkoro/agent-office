@@ -57,3 +57,9 @@ Environment overrides:
 Legacy `PIXEL_AGENTS_*` names still work for compatibility with earlier standalone installs.
 
 See [Self-Hosting](self-hosting.md) for remote/private access examples.
+
+Existing service files can keep old explicit bind settings. To inspect the active unit:
+
+```bash
+sudo systemctl cat agent-office-wsl
+```
