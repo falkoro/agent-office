@@ -1,6 +1,7 @@
 param(
   [string]$TaskName = "AgentOfficeDashboard",
   [int]$Port = 4627,
+  [string]$HostName = "127.0.0.1",
   [ValidateSet("auto", "bun", "node")]
   [string]$Runtime = "auto"
 )
@@ -36,6 +37,7 @@ $arguments = @(
   "-File", "`"$runner`"",
   "-Root", "`"$root`"",
   "-Port", $Port,
+  "-HostName", $HostName,
   "-Runtime", $Runtime
 ) -join " "
 
@@ -49,7 +51,7 @@ Register-ScheduledTask `
   -Action $action `
   -Trigger $trigger `
   -Principal $principal `
-  -Description "Agent Office dashboard for native Windows Codex, Claude, OpenCode, and Antigravity processes." `
+  -Description "Agent Office dashboard for native Windows Codex, Claude, Grok, OpenCode, Antigravity, and Goose processes." `
   -Force | Out-Null
 
 Start-ScheduledTask -TaskName $TaskName

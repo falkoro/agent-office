@@ -1,7 +1,7 @@
 # Agent Office Windows Background Service
 
-Windows can run the same standalone dashboard for native Windows Codex, Claude, OpenCode, and Antigravity
-processes. The bundled installer uses Task Scheduler because plain Node/Bun processes are not
+Windows can run the same standalone dashboard for native Windows Codex, Claude, Grok, OpenCode, and
+Antigravity processes. The bundled installer uses Task Scheduler because plain Node/Bun processes are not
 Windows Service Control Manager services unless wrapped by WinSW, NSSM, or a similar service
 wrapper.
 
@@ -63,3 +63,19 @@ bun run uninstall:windows-service
 ```
 
 For a true SCM Windows Service, wrap `scripts\run-windows-dashboard.ps1` with WinSW or NSSM.
+
+Configuration can be set in `.env` or passed to the runner. Local-only is the default:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-windows-dashboard.ps1 -HostName 127.0.0.1 -Port 4627
+```
+
+For private remote access, set a non-local host only with auth or an access-controlled proxy:
+
+```env
+AGENT_OFFICE_HOST=0.0.0.0
+AGENT_OFFICE_AUTH_USER=agent-office
+AGENT_OFFICE_AUTH_PASSWORD=replace-with-a-long-random-password
+```
+
+See [Self-Hosting](self-hosting.md) for the full configuration table.

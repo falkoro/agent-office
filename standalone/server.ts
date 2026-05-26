@@ -1,4 +1,5 @@
 import { execFileSync } from 'child_process';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as os from 'os';
@@ -43,11 +44,22 @@ interface ProviderActivity {
 
 type WebviewMessage = Record<string, unknown>;
 
-const HOST = process.env.PIXEL_AGENTS_HOST || '0.0.0.0';
-const PORT = Number(process.env.PIXEL_AGENTS_PORT || '4627');
-const POLL_INTERVAL_MS = Number(process.env.PIXEL_AGENTS_POLL_INTERVAL_MS || '1500');
-const ACTIVE_GRACE_MS = Number(process.env.PIXEL_AGENTS_ACTIVE_GRACE_MS || '7000');
-const webRoot = path.resolve(process.env.PIXEL_AGENTS_WEB_ROOT || path.join('dist', 'webview'));
+loadEnvFile();
+
+const HOST = readConfig('AGENT_OFFICE_HOST', 'PIXEL_AGENTS_HOST', '127.0.0.1');
+const PORT = Number(readConfig('AGENT_OFFICE_PORT', 'PIXEL_AGENTS_PORT', '4627'));
+const POLL_INTERVAL_MS = Number(
+  readConfig('AGENT_OFFICE_POLL_INTERVAL_MS', 'PIXEL_AGENTS_POLL_INTERVAL_MS', '1500'),
+);
+const ACTIVE_GRACE_MS = Number(
+  readConfig('AGENT_OFFICE_ACTIVE_GRACE_MS', 'PIXEL_AGENTS_ACTIVE_GRACE_MS', '7000'),
+);
+const AUTH_USER = readConfig('AGENT_OFFICE_AUTH_USER', 'PIXEL_AGENTS_AUTH_USER', 'agent-office');
+const AUTH_PASSWORD = readConfig('AGENT_OFFICE_AUTH_PASSWORD', 'PIXEL_AGENTS_AUTH_PASSWORD', '');
+const AUTH_ENABLED = AUTH_PASSWORD.length > 0;
+const webRoot = path.resolve(
+  readConfig('AGENT_OFFICE_WEB_ROOT', 'PIXEL_AGENTS_WEB_ROOT', path.join('dist', 'webview')),
+);
 
 const providerLabels: Record<ProviderId, string> = {
   codex: 'Codex',
@@ -80,11 +92,28 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`[Agent Office] listening on http://${HOST}:${PORT}`);
   console.log(`[Agent Office] serving ${webRoot}`);
+  console.log(
+    `[Agent Office] built-in auth ${AUTH_ENABLED ? `enabled for ${AUTH_USER}` : 'disabled'}`,
+  );
+  if (!AUTH_ENABLED && !isLocalHost(HOST)) {
+    console.warn(
+      '[Agent Office] warning: listening beyond localhost without built-in auth. Use a trusted network or access-controlled proxy.',
+    );
+  }
   scanAndBroadcast();
   setInterval(scanAndBroadcast, POLL_INTERVAL_MS);
 });
 
 async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  if (!isAuthorized(req)) {
+    res.writeHead(401, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'WWW-Authenticate': 'Basic realm="Agent Office", charset="UTF-8"',
+    });
+    res.end('authentication required');
+    return;
+  }
+
   const url = new URL(req.url || '/', `http://${req.headers.host || `${HOST}:${PORT}`}`);
 
   if (req.method === 'GET' && url.pathname === '/api/health') {
@@ -125,6 +154,79 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
   }
 
   serveStatic(url.pathname, req, res);
+}
+
+function loadEnvFile(): void {
+  const envFile = process.env.AGENT_OFFICE_ENV_FILE || process.env.PIXEL_AGENTS_ENV_FILE || '.env';
+  const envPath = path.resolve(envFile);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(envPath, 'utf-8');
+  } catch {
+    return;
+  }
+
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (process.env[key] !== undefined) continue;
+
+    process.env[key] = parseEnvValue(rawValue);
+  }
+}
+
+function parseEnvValue(rawValue: string): string {
+  const value = rawValue.trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value.replace(/\s+#.*$/, '');
+}
+
+function readConfig(name: string, legacyName: string, fallback: string): string {
+  return process.env[name] ?? process.env[legacyName] ?? fallback;
+}
+
+function isAuthorized(req: http.IncomingMessage): boolean {
+  if (!AUTH_ENABLED) return true;
+
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Basic ')) return false;
+
+  let decoded: string;
+  try {
+    decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf-8');
+  } catch {
+    return false;
+  }
+
+  const separator = decoded.indexOf(':');
+  if (separator === -1) return false;
+
+  const user = decoded.slice(0, separator);
+  const password = decoded.slice(separator + 1);
+  return safeEquals(user, AUTH_USER) && safeEquals(password, AUTH_PASSWORD);
+}
+
+function safeEquals(actual: string, expected: string): boolean {
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function isLocalHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
 function handleEvents(res: http.ServerResponse): void {

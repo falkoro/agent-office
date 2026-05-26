@@ -1,7 +1,7 @@
 param(
   [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [int]$Port = 4627,
-  [string]$HostName = "0.0.0.0",
+  [string]$HostName = "127.0.0.1",
   [ValidateSet("auto", "bun", "node")]
   [string]$Runtime = "auto"
 )
@@ -30,9 +30,9 @@ if (-not (Test-Path $webIndex)) {
 }
 
 $env:NODE_ENV = "production"
-$env:PIXEL_AGENTS_HOST = $HostName
-$env:PIXEL_AGENTS_PORT = [string]$Port
-$env:PIXEL_AGENTS_WEB_ROOT = Join-Path $Root "dist\webview"
+$env:AGENT_OFFICE_HOST = $HostName
+$env:AGENT_OFFICE_PORT = [string]$Port
+$env:AGENT_OFFICE_WEB_ROOT = Join-Path $Root "dist\webview"
 
 Set-Location $Root
 

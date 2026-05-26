@@ -15,9 +15,12 @@ Other useful ways to run it:
 - **Agent hooks**: richer status than process scanning when a CLI supports hooks or structured event logs.
 - **OpenTelemetry/file tail adapters**: a good next step for tools that emit logs but not hooks.
 
+See [Self-Hosting](self-hosting.md) for environment variables, built-in Basic auth, and local-only
+versus remote/private setup examples.
+
 ## Exposure Note
 
 Agent Office is meant to observe local developer tools. The standalone server can reveal process
-counts, provider names, workspace labels, and recent activity hints. For public demos, put it behind
-Cloudflare Access, Tailscale, VPN auth, or an equivalent gate. Do not expose an unauthenticated
-instance directly to the internet.
+counts, provider names, workspace labels, and recent activity hints. For remote or public-hostname
+access, use built-in Basic auth, Cloudflare Access, Tailscale, VPN auth, or an equivalent gate. Do
+not expose an unauthenticated instance directly to the internet.
