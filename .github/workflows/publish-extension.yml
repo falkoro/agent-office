@@ -16,7 +16,11 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    # Aggressive mbrother rollout: migrated to local beefy Podman self-hosted runner (logan-laptop)
+    # Replaces ubuntu-latest for the release/publish job (VS Code Marketplace + Open VSX).
+    # Uses master branch + complex multi-package npm ci + builds (per CLAUDE.md).
+    # New labels + clear fallback comment.
+    runs-on: [self-hosted, linux, x64, podman, logan-laptop, beefy]
     timeout-minutes: 15
     permissions:
       contents: write

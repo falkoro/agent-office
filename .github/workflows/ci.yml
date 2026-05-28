@@ -25,7 +25,12 @@ concurrency:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # Aggressive mbrother rollout: migrated to local beefy Podman self-hosted runner (logan-laptop)
+    # Replaces ubuntu-latest for the full CI matrix (multi-package installs, typecheck, lint, tests, builds).
+    # This repo uses master branch. See CLAUDE.md for full architecture.
+    # Labels: self-hosted, linux, x64, podman, logan-laptop, beefy
+    # Fallback: temporarily set back to ubuntu-latest if the laptop runner is unavailable.
+    runs-on: [self-hosted, linux, x64, podman, logan-laptop, beefy]
     timeout-minutes: 15
 
     steps:
