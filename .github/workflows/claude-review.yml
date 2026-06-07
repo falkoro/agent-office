@@ -17,19 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          repository: spot-techno/.github
-          path: .spot-github
-          sparse-checkout: |
-            scripts/resolve-dario-proxy.sh
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/checkout@v5
-        with:
           fetch-depth: 0
 
       - name: Resolve Dario proxy
         id: dario
-        run: bash .spot-github/scripts/resolve-dario-proxy.sh
+        run: bash .github/scripts/resolve-dario-proxy.sh
 
       - uses: anthropics/claude-code-action@v1
         env:

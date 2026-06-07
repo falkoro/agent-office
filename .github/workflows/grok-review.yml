@@ -20,19 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          repository: spot-techno/.github
-          path: .spot-github
-          sparse-checkout: |
-            scripts/resolve-hermes-proxy.sh
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/checkout@v5
-        with:
           fetch-depth: 0
 
       - name: Resolve Hermes proxy
         id: proxy
-        run: bash .spot-github/scripts/resolve-hermes-proxy.sh
+        run: bash .github/scripts/resolve-hermes-proxy.sh
 
       - name: Grok review
         env:
