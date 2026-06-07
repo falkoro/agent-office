@@ -2,7 +2,10 @@
 # Discover the host-local Hermes llm-proxy (Grok) for self-hosted runners.
 set -euo pipefail
 
-GW="$(ip route 2>/dev/null | awk '/default/{print $3; exit}')"
+GW=""
+if command -v ip >/dev/null 2>&1; then
+  GW="$(ip route 2>/dev/null | awk '/default/{print $3; exit}')"
+fi
 for H in host.containers.internal "$GW" 172.18.0.1 172.17.0.1 127.0.0.1; do
   [ -z "$H" ] && continue
   if curl -fsS --max-time 6 "http://$H:38765/status" >/dev/null 2>&1; then
