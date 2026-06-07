@@ -1,0 +1,46 @@
+name: Grok Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: grok-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Grok review (Hermes)
+    if: vars.GROK_REVIEW_ENABLED == 'true'
+    runs-on: [self-hosted, linux, x64, spot-tech-ci]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Hermes proxy
+        id: proxy
+        run: |
+          GW="$(ip route 2>/dev/null | awk '/default/{print $3; exit}')"
+          for H in host.containers.internal "$GW" 172.18.0.1 172.17.0.1 127.0.0.1; do
+            [ -z "$H" ] && continue
+            if curl -fsS --max-time 6 "http://$H:38765/status" >/dev/null 2>&1; then
+              echo "url=http://$H:38765/api/v1/messages" >> "$GITHUB_OUTPUT"
+              echo "Hermes reachable at $H"
+              exit 0
+            fi
+          done
+          echo "::error::Hermes proxy (:38765) unreachable from the runner" >&2
+          exit 1
+
+      - name: Grok review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GROK_URL: ${{ steps.proxy.outputs.url }}
+        run: python3 scripts/grok-review.py
