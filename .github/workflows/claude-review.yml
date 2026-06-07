@@ -13,16 +13,25 @@ jobs:
   review:
     name: Claude review
     if: vars.CLAUDE_REVIEW_ENABLED == 'true' && vars.CLAUDE_REVIEW_CONFIGURED == 'true'
-    runs-on: [self-hosted, linux, x64, spot-tech-ci]
+    runs-on: [self-hosted, logan-gl502vs]
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Resolve Dario proxy
+        id: dario
+        run: bash .github/scripts/resolve-dario-proxy.sh
+
+      - id: claude
+        uses: anthropics/claude-code-action@v1
+        if: steps.dario.outputs.available == 'true'
+        env:
+          ANTHROPIC_BASE_URL: ${{ steps.dario.outputs.base_url }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: dario
           claude_args: "--max-turns 25"
           prompt: |
             Review this pull request for Agent Office and post concise inline review comments. Approve only if it is clean. Focus on, in priority order:
@@ -32,3 +41,14 @@ jobs:
             3. EXTENSION UX — broken webview messaging, animation/state bugs, packaging/manifest issues, docs drift from actual behavior.
 
             Be specific with file:line. Do not nitpick style.
+
+      - name: Report Claude review status
+        if: always()
+        run: |
+          if [ "${{ steps.dario.outputs.available }}" != "true" ]; then
+            echo "::warning::Claude review skipped because Dario was unavailable."
+          elif [ "${{ steps.claude.outcome }}" = "failure" ]; then
+            echo "::warning::Claude review failed; leaving required check green so merge is not blocked by review infrastructure."
+          else
+            echo "Claude review completed with outcome: ${{ steps.claude.outcome }}"
+          fi

@@ -1,0 +1,111 @@
+name: Codex Review
+
+# PR merge should wait on "Codex merge gate" (spot-tech pattern).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: codex-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enabled:
+    name: Codex review enabled
+    runs-on: ubuntu-latest
+    outputs:
+      run_review: ${{ steps.check.outputs.run_review }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ vars.CODEX_REVIEW_ENABLED }}" = "true" ]; then
+            echo "run_review=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_review=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  review:
+    name: Codex review
+    needs: enabled
+    if: needs.enabled.outputs.run_review == 'true'
+    runs-on: [self-hosted, logan-gl502vs]
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Codex CLI
+        id: codex
+        run: |
+          set -euo pipefail
+          CODEX_BIN="${CODEX_BIN:-codex}"
+          if ! command -v "$CODEX_BIN" >/dev/null 2>&1; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Codex CLI not on PATH; Codex review skipped."
+            exit 0
+          fi
+          AUTH="${CODEX_HOME:-$HOME/.codex}/auth.json"
+          if [ ! -f "$AUTH" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Codex auth missing (${AUTH}); Codex review skipped."
+            exit 0
+          fi
+          {
+            echo "available=true"
+            echo "bin=$(command -v "$CODEX_BIN")"
+          } >> "$GITHUB_OUTPUT"
+          echo "Codex CLI ready at $(command -v "$CODEX_BIN")"
+
+      - name: Codex review
+        id: codex_review
+        if: steps.codex.outputs.available == 'true'
+        timeout-minutes: 18
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          CODEX_BIN: ${{ steps.codex.outputs.bin }}
+          CODEX_MODEL: ${{ vars.CODEX_REVIEW_MODEL }}
+          REPO_ROOT: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${BASE_REF}"
+          python3 scripts/codex-review.py
+
+  merge-gate:
+    name: Codex merge gate
+    needs: enabled
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - name: Wait for Codex review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ needs.enabled.outputs.run_review }}" != "true" ]; then
+            echo "Codex review disabled — merge allowed."
+            exit 0
+          fi
+
+          DEADLINE=$(( $(date +%s) + 900 ))
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+              --jq '.jobs[] | select(.name == "Codex review") | .conclusion' 2>/dev/null || true)"
+            if [ -n "$CONCLUSION" ] && [ "$CONCLUSION" != "null" ]; then
+              echo "Codex review finished ($CONCLUSION) — merge allowed."
+              exit 0
+            fi
+            sleep 20
+          done
+
+          echo "15-minute Codex review window elapsed — merge allowed."
