@@ -26,9 +26,9 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: ${{ steps.dario.outputs.base_url }}
-          ANTHROPIC_API_KEY: dario
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: dario
           claude_args: "--max-turns 25"
           prompt: |
             Review this pull request for Agent Office and post concise inline review comments. Approve only if it is clean. Focus on, in priority order:
