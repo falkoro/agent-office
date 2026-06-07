@@ -1,0 +1,48 @@
+name: Claude Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    name: Claude review
+    if: vars.CLAUDE_REVIEW_ENABLED == 'true' && vars.CLAUDE_REVIEW_CONFIGURED == 'true'
+    runs-on: [self-hosted, logan-gl502vs]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: spot-techno/.github
+          path: .spot-github
+          sparse-checkout: |
+            scripts/resolve-dario-proxy.sh
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Dario proxy
+        id: dario
+        run: bash .spot-github/scripts/resolve-dario-proxy.sh
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: ${{ steps.dario.outputs.base_url }}
+          ANTHROPIC_API_KEY: ${{ steps.dario.outputs.api_key }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--max-turns 25"
+          prompt: |
+            Review this pull request for Agent Office and post concise inline review comments. Approve only if it is clean. Focus on, in priority order:
+
+            1. SECURITY — hook endpoint auth, unsafe file reads/writes, secret leakage, webview message-trust mistakes, path traversal in asset loading.
+            2. CORRECTNESS — terminal adoption, transcript parsing, layout/config persistence, server lifecycle, cross-window sync regressions.
+            3. EXTENSION UX — broken webview messaging, animation/state bugs, packaging/manifest issues, docs drift from actual behavior.
+
+            Be specific with file:line. Do not nitpick style.

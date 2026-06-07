@@ -1,0 +1,43 @@
+name: Grok Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: grok-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Grok review (Hermes)
+    if: vars.GROK_REVIEW_ENABLED == 'true'
+    runs-on: [self-hosted, logan-gl502vs]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: spot-techno/.github
+          path: .spot-github
+          sparse-checkout: |
+            scripts/resolve-hermes-proxy.sh
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Hermes proxy
+        id: proxy
+        run: bash .spot-github/scripts/resolve-hermes-proxy.sh
+
+      - name: Grok review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GROK_URL: ${{ steps.proxy.outputs.url }}
+        run: python3 scripts/grok-review.py
