@@ -13,16 +13,30 @@ jobs:
   review:
     name: Claude review
     if: vars.CLAUDE_REVIEW_ENABLED == 'true' && vars.CLAUDE_REVIEW_CONFIGURED == 'true'
-    runs-on: [self-hosted, linux, x64, spot-tech-ci]
+    runs-on: [self-hosted, logan-gl502vs]
     steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: spot-techno/.github
+          path: .spot-github
+          sparse-checkout: |
+            scripts/resolve-dario-proxy.sh
+          sparse-checkout-cone-mode: false
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      - name: Resolve Dario proxy
+        id: dario
+        run: bash .spot-github/scripts/resolve-dario-proxy.sh
+
       - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: ${{ steps.dario.outputs.base_url }}
+          ANTHROPIC_API_KEY: ${{ steps.dario.outputs.api_key }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--max-turns 25"
           prompt: |
             Review this pull request for Agent Office and post concise inline review comments. Approve only if it is clean. Focus on, in priority order:

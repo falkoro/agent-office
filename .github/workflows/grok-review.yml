@@ -16,26 +16,23 @@ jobs:
   review:
     name: Grok review (Hermes)
     if: vars.GROK_REVIEW_ENABLED == 'true'
-    runs-on: [self-hosted, linux, x64, spot-tech-ci]
+    runs-on: [self-hosted, logan-gl502vs]
     steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: spot-techno/.github
+          path: .spot-github
+          sparse-checkout: |
+            scripts/resolve-hermes-proxy.sh
+          sparse-checkout-cone-mode: false
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Resolve Hermes proxy
         id: proxy
-        run: |
-          GW="$(ip route 2>/dev/null | awk '/default/{print $3; exit}')"
-          for H in host.containers.internal "$GW" 172.18.0.1 172.17.0.1 127.0.0.1; do
-            [ -z "$H" ] && continue
-            if curl -fsS --max-time 6 "http://$H:38765/status" >/dev/null 2>&1; then
-              echo "url=http://$H:38765/api/v1/messages" >> "$GITHUB_OUTPUT"
-              echo "Hermes reachable at $H"
-              exit 0
-            fi
-          done
-          echo "::error::Hermes proxy (:38765) unreachable from the runner" >&2
-          exit 1
+        run: bash .spot-github/scripts/resolve-hermes-proxy.sh
 
       - name: Grok review
         env:
