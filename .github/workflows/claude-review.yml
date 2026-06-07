@@ -26,7 +26,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: ${{ steps.dario.outputs.base_url }}
-          ANTHROPIC_API_KEY: ${{ steps.dario.outputs.api_key }}
+          ANTHROPIC_API_KEY: dario
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: "--max-turns 25"
